@@ -4,61 +4,61 @@ function localized(zh, en) {
 
 function departmentTemplate() {
   return {
-    title: localized("新部门", "New department"),
-    lead: localized("负责人", "Lead"),
-    scope: localized("负责范围", "Describe responsibilities."),
+    title: localized("", ""),
+    lead: localized("", ""),
+    scope: localized("", ""),
     status: "ACTIVE"
   };
 }
 
 function activityTemplate() {
   return {
-    title: localized("活动名称", "Activity title"),
+    title: localized("", ""),
     date: new Date().toISOString(),
-    location: localized("地点", "Location"),
+    location: localized("", ""),
     status: "PLANNED",
-    summary: localized("活动简介", "Activity summary"),
+    summary: localized("", ""),
     published: true
   };
 }
 
 function financeCategoryTemplate() {
   return {
-    label: localized("分类", "Category"),
+    label: localized("", ""),
     amount: 0,
-    note: localized("备注", "Notes")
+    note: localized("", "")
   };
 }
 
 function initiativeTemplate() {
   return {
-    title: localized("提案名称", "Proposal title"),
+    title: localized("", ""),
     stage: "QUEUE",
-    owner: localized("负责人", "Owner"),
-    summary: localized("提案说明", "Proposal summary")
+    owner: localized("", ""),
+    summary: localized("", "")
   };
 }
 
 function publicationTemplate() {
   return {
-    title: localized("纪要标题", "Note title"),
+    title: localized("", ""),
     date: new Date().toISOString(),
     tag: "UPDATE",
-    summary: localized("纪要摘要", "Note summary")
+    summary: localized("", "")
   };
 }
 
 function noticeTemplate() {
   return {
     active: true,
-    label: localized("公告", "Notice"),
-    message: localized("填写公告内容。", "Add your notice here.")
+    label: localized("", ""),
+    message: localized("", "")
   };
 }
 
 function socialLinkTemplate() {
   return {
-    label: localized("新社媒", "New social"),
+    label: localized("", ""),
     icon: "globe",
     url: ""
   };
@@ -66,9 +66,9 @@ function socialLinkTemplate() {
 
 function leadershipTemplate() {
   return {
-    title: localized("学生会主席团", "Student Union Leadership"),
-    lead: localized("会长 / 主席团", "President / Executive Board"),
-    scope: localized("负责总体战略、资源统筹、公开承诺兑现与跨部门协调。", "Own strategy, resource allocation, public commitments, and coordination across departments."),
+    title: localized("", ""),
+    lead: localized("", ""),
+    scope: localized("", ""),
     status: "CORE"
   };
 }
@@ -97,102 +97,22 @@ export function createDefaultContent() {
       ctaSecondary: localized("跟进提案状态", "Track proposals")
     },
     notices: [
-      {
-        active: true,
-        label: localized("竞选样站", "Campaign demo"),
-        message: localized(
-          "当前数据为样板内容，可在后台替换成你自己的竞选承诺、活动和实际公开数据。",
-          "The current records are sample content and can be replaced from the admin console."
-        )
-      },
-      {
-        active: true,
-        label: localized("财务说明", "Finance note"),
-        message: localized(
-          "财务流向支持手动修正；如涉及临时调拨或不便公开事项，可整体切换为“暂未公开”。",
-          "Finance disclosures support manual overrides, and detailed flow can be hidden when records are temporarily not publishable."
-        )
-      }
+      
     ],
     organization: {
       heading: localized("学生会组织关系图", "Student union relationship map"),
-      intro: localized(
-        "用关系图而不是平铺卡片，直接展示会长与各部门之间的协作连接，便于同学理解职责和汇报链路。",
-        "Use a relationship map instead of flat cards so students can quickly read responsibilities and reporting lines."
-      ),
+      intro: localized("", ""),
       leadership: leadershipTemplate(),
-      departments: [
-        {
-          title: localized("秘书处", "Secretariat"),
-          lead: localized("秘书长", "Secretary General"),
-          scope: localized("统筹会议节奏、项目跟进与跨部门协同。", "Coordinate meetings, follow-ups, and cross-team operations."),
-          status: "ACTIVE"
-        },
-        {
-          title: localized("活动与项目部", "Programs & Events"),
-          lead: localized("活动负责人", "Programs lead"),
-          scope: localized("策划近期活动、管理报名流程和现场执行。", "Own event planning, sign-up logistics, and on-site delivery."),
-          status: "OPEN"
-        },
-        {
-          title: localized("财务与资源部", "Finance & Resources"),
-          lead: localized("财务负责人", "Finance lead"),
-          scope: localized("管理预算、可用资金、物资申请与资金公开。", "Manage budget, available funds, resources, and finance disclosures."),
-          status: "PUBLIC"
-        },
-        {
-          title: localized("宣传与媒体部", "Communications"),
-          lead: localized("宣传负责人", "Comms lead"),
-          scope: localized("负责公告发布、双语更新和社媒协同。", "Publish notices, maintain bilingual updates, and coordinate media."),
-          status: "ACTIVE"
-        }
-      ]
+      departments: []
     },
     activities: {
       heading: localized("近期活动看板", "Recent activity board"),
       intro: localized("", ""),
-      items: [
-        {
-          title: localized("透明预算说明会", "Budget transparency town hall"),
-          date: "2026-04-20T18:30:00+08:00",
-          location: localized("学生活动中心 201", "Student Center Room 201"),
-          status: "OPEN",
-          summary: localized(
-            "集中说明本学期活动经费安排、公开规则和同学反馈渠道。",
-            "Walk through this term's spending plan, disclosure rules, and student feedback channels."
-          ),
-          published: true
-        },
-        {
-          title: localized("志愿者招募与培训", "Volunteer recruitment and onboarding"),
-          date: "2026-04-24T16:00:00+08:00",
-          location: localized("报告厅 B", "Lecture Hall B"),
-          status: "RECRUITING",
-          summary: localized(
-            "公开招募活动志愿者，并同步介绍学生会内部协作流程。",
-            "Recruit volunteers and introduce the union's operating workflow in one session."
-          ),
-          published: true
-        },
-        {
-          title: localized("主席团月度答疑", "Monthly executive Q&A"),
-          date: "2026-04-28T19:30:00+08:00",
-          location: localized("线上直播", "Live stream"),
-          status: "SCHEDULED",
-          summary: localized(
-            "回答同学关心的问题，并对上月提案处理状态做公开反馈。",
-            "Answer student questions and publicly report progress on the previous month's proposals."
-          ),
-          published: true
-        }
-      ]
+      items: []
     },
     finance: {
       heading: localized("财务与资源公开", "Finance and resource disclosure"),
-      intro: localized(
-        "公开总体预算、当前可用资金和分类流向；如遇特殊情况，可在后台先切换为暂未公开。",
-        "Publish the overall budget, available funds, and category-level flows; hide details temporarily when needed."
-      ),
+      intro: localized("", ""),
       published: true,
       lastUpdated: "2026-04-14T11:45:00+08:00",
       summary: localized(
@@ -212,71 +132,17 @@ export function createDefaultContent() {
         available: 28600,
         reserve: 9500
       },
-      categories: [
-        {
-          label: localized("活动执行", "Program delivery"),
-          amount: 24800,
-          note: localized("场地、物资与现场支持。", "Venue, materials, and delivery support.")
-        },
-        {
-          label: localized("宣传制作", "Communications"),
-          amount: 6800,
-          note: localized("海报、摄影、线上发布素材。", "Posters, photography, and digital assets.")
-        },
-        {
-          label: localized("学生福利", "Student welfare"),
-          amount: 12100,
-          note: localized("奖品、补助和专项支持。", "Prizes, subsidies, and special support.")
-        }
-      ]
+      categories: []
     },
     initiatives: {
       heading: localized("提案追踪台", "Proposal tracker"),
       intro: localized("", ""),
-      items: [
-        {
-          title: localized("建立提案响应 SLA", "Set a proposal response SLA"),
-          stage: "IN PROGRESS",
-          owner: localized("秘书处", "Secretariat"),
-          summary: localized("承诺学生提交建议后 5 个工作日内给出受理状态。", "Respond with intake status within 5 working days after a student proposal is submitted.")
-        },
-        {
-          title: localized("活动预算公开模板", "Budget disclosure template"),
-          stage: "DESIGN",
-          owner: localized("财务与资源部", "Finance & Resources"),
-          summary: localized("每个活动结束后发布统一格式的预算摘要和去向说明。", "Publish a standard budget digest after each event.")
-        },
-        {
-          title: localized("会议纪要周更", "Weekly public notes"),
-          stage: "READY",
-          owner: localized("宣传与媒体部", "Communications"),
-          summary: localized("用短格式纪要说明本周决议、风险点和下周动作。", "Ship concise weekly notes on decisions, risks, and next actions.")
-        }
-      ]
+      items: []
     },
     publications: {
       heading: localized("公开纪要与说明", "Public notes and updates"),
       intro: localized("", ""),
-      items: [
-        {
-          title: localized("透明门户上线说明", "Portal launch note"),
-          date: "2026-04-14T12:00:00+08:00",
-          tag: "LAUNCH",
-          summary: localized("说明为什么要做这个平台、公开到什么程度、哪些内容仍需人工判断。", "Explain why the platform exists, what gets published, and what still requires manual review.")
-        },
-        {
-          title: localized("第一周工作简报", "Week-one operating brief"),
-          date: "2026-04-21T18:00:00+08:00",
-          tag: "WEEKLY",
-          summary: localized("发布本周完成事项、延期项目和需要学生配合的事项。", "Summarize completed work, delayed items, and calls for student participation.")
-        },
-        {
-          title: localized("财务公开规则说明", "Finance disclosure rules"),
-          date: "2026-04-18T17:00:00+08:00",
-          tag: "POLICY",
-          summary: localized("解释为什么有些记录只展示汇总、不展示单笔流水。", "Clarify why some records are shown as aggregates rather than line items.")
-        }
-      ]
+      items: []
     },
     footer: {
       presidentEmail: "president@example.edu",
@@ -284,23 +150,7 @@ export function createDefaultContent() {
         "透明不是一次性动作，而是一套持续发布、持续回应的工作机制。",
         "Transparency is not a one-off announcement. It is a repeatable publishing and response system."
       ),
-      socialLinks: [
-        {
-          label: localized("学生会主页", "Union homepage"),
-          icon: "globe",
-          url: "https://example.edu/union"
-        },
-        {
-          label: localized("微信公众号", "WeChat"),
-          icon: "wechat",
-          url: "https://example.edu/wechat"
-        },
-        {
-          label: localized("Instagram", "Instagram"),
-          icon: "instagram",
-          url: "https://instagram.com/example"
-        }
-      ]
+      socialLinks: []
     },
     settings: {
       aiReady: true

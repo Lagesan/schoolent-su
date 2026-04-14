@@ -123,23 +123,18 @@ const dom = {
   noticeStrip: document.querySelector("#noticeStrip"),
   organizationLabel: document.querySelector("#organizationLabel"),
   organizationHeading: document.querySelector("#organizationHeading"),
-  organizationIntro: document.querySelector("#organizationIntro"),
   organizationChart: document.querySelector("#organizationChart"),
   activitiesLabel: document.querySelector("#activitiesLabel"),
   activitiesHeading: document.querySelector("#activitiesHeading"),
-  activitiesIntro: document.querySelector("#activitiesIntro"),
   activitiesList: document.querySelector("#activitiesList"),
   financeLabel: document.querySelector("#financeLabel"),
   financeHeading: document.querySelector("#financeHeading"),
-  financeIntro: document.querySelector("#financeIntro"),
   financeContainer: document.querySelector("#financeContainer"),
   initiativesLabel: document.querySelector("#initiativesLabel"),
   initiativesHeading: document.querySelector("#initiativesHeading"),
-  initiativesIntro: document.querySelector("#initiativesIntro"),
   initiativesGrid: document.querySelector("#initiativesGrid"),
   publicationsLabel: document.querySelector("#publicationsLabel"),
   publicationsHeading: document.querySelector("#publicationsHeading"),
-  publicationsIntro: document.querySelector("#publicationsIntro"),
   publicationsGrid: document.querySelector("#publicationsGrid"),
   siteFooter: document.querySelector("#siteFooter")
 };
@@ -208,15 +203,10 @@ function render() {
   dom.publicationsLabel.textContent = language.labels.publications.toUpperCase();
 
   dom.organizationHeading.textContent = pick(content.organization.heading);
-  setOptionalText(dom.organizationIntro, pick(content.organization.intro));
   dom.activitiesHeading.textContent = pick(content.activities.heading);
-  setOptionalText(dom.activitiesIntro, pick(content.activities.intro));
   dom.financeHeading.textContent = pick(content.finance.heading);
-  setOptionalText(dom.financeIntro, pick(content.finance.intro));
   dom.initiativesHeading.textContent = pick(content.initiatives.heading);
-  setOptionalText(dom.initiativesIntro, pick(content.initiatives.intro));
   dom.publicationsHeading.textContent = pick(content.publications.heading);
-  setOptionalText(dom.publicationsIntro, pick(content.publications.intro));
 
   renderMetrics(content, language);
   renderNotices(content.notices);
@@ -503,11 +493,6 @@ function resolveSocialIcon(icon) {
   return socialIcons[icon] || socialIcons.default;
 }
 
-function setOptionalText(node, value) {
-  const text = String(value || "").trim();
-  node.textContent = text;
-  node.hidden = text.length === 0;
-}
 
 function emptyState() {
   const template = document.querySelector("#emptyStateTemplate");

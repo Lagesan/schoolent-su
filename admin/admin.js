@@ -23,42 +23,42 @@ const socialIconOptions = [
 const factories = {
   notices: () => ({
     active: true,
-    label: { zh: "新公告", en: "New notice" },
-    message: { zh: "填写新的公告内容。", en: "Add a new public notice." }
+    label: { zh: "", en: "" },
+    message: { zh: "", en: "" }
   }),
   "organization.departments": () => ({
-    title: { zh: "新部门", en: "New department" },
-    lead: { zh: "负责人", en: "Lead" },
-    scope: { zh: "负责范围", en: "Describe responsibilities." },
+    title: { zh: "", en: "" },
+    lead: { zh: "", en: "" },
+    scope: { zh: "", en: "" },
     status: "ACTIVE"
   }),
   "activities.items": () => ({
-    title: { zh: "新活动", en: "New activity" },
+    title: { zh: "", en: "" },
     date: new Date().toISOString(),
-    location: { zh: "地点待定", en: "Location TBD" },
+    location: { zh: "", en: "" },
     status: "PLANNED",
-    summary: { zh: "填写活动说明。", en: "Add an activity summary." },
+    summary: { zh: "", en: "" },
     published: true
   }),
   "finance.categories": () => ({
-    label: { zh: "新项目", en: "New category" },
+    label: { zh: "", en: "" },
     amount: 0,
-    note: { zh: "备注", en: "Notes" }
+    note: { zh: "", en: "" }
   }),
   "initiatives.items": () => ({
-    title: { zh: "新提案", en: "New proposal" },
+    title: { zh: "", en: "" },
     stage: "QUEUE",
-    owner: { zh: "负责人", en: "Owner" },
-    summary: { zh: "填写提案概述。", en: "Add proposal summary." }
+    owner: { zh: "", en: "" },
+    summary: { zh: "", en: "" }
   }),
   "publications.items": () => ({
-    title: { zh: "新纪要", en: "New note" },
+    title: { zh: "", en: "" },
     date: new Date().toISOString(),
     tag: "UPDATE",
-    summary: { zh: "填写纪要内容。", en: "Add a public note." }
+    summary: { zh: "", en: "" }
   }),
   "footer.socialLinks": () => ({
-    label: { zh: "新社媒", en: "New social" },
+    label: { zh: "", en: "" },
     icon: "globe",
     url: ""
   })
@@ -209,7 +209,6 @@ function renderEditor() {
         <h3>组织关系图</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "organization.heading", state.content.organization.heading)}
-          ${localizedFields("模块说明", "organization.intro", state.content.organization.intro, true)}
         </div>
 
         <div class="editor-card">
@@ -274,7 +273,6 @@ function renderEditor() {
         <h3>近期活动</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "activities.heading", state.content.activities.heading)}
-          ${localizedFields("模块说明", "activities.intro", state.content.activities.intro, true)}
         </div>
         <div class="stack-list">
           ${state.content.activities.items
@@ -313,7 +311,6 @@ function renderEditor() {
         <h3>财务公开</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "finance.heading", state.content.finance.heading)}
-          ${localizedFields("模块说明", "finance.intro", state.content.finance.intro, true)}
           ${localizedFields("公开摘要", "finance.summary", state.content.finance.summary, true)}
           ${localizedFields("人工修正说明", "finance.manualNote", state.content.finance.manualNote, true)}
           ${localizedFields("隐藏原因说明", "finance.hiddenFlowReason", state.content.finance.hiddenFlowReason, true)}
@@ -357,7 +354,6 @@ function renderEditor() {
         <h3>提案追踪</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "initiatives.heading", state.content.initiatives.heading)}
-          ${localizedFields("模块说明", "initiatives.intro", state.content.initiatives.intro, true)}
         </div>
         <div class="stack-list">
           ${state.content.initiatives.items
@@ -391,7 +387,6 @@ function renderEditor() {
         <h3>公开纪要</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "publications.heading", state.content.publications.heading)}
-          ${localizedFields("模块说明", "publications.intro", state.content.publications.intro, true)}
         </div>
         <div class="stack-list">
           ${state.content.publications.items
