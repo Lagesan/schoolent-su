@@ -1,0 +1,133 @@
+.admin-shell {
+  padding-bottom: 72px;
+}
+
+.admin-main {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-intro {
+  max-width: 78ch;
+}
+
+.status-strip,
+.admin-card {
+  padding: 22px 24px;
+}
+
+.status-strip[data-tone="ok"] {
+  color: var(--success);
+}
+
+.status-strip[data-tone="warn"] {
+  color: var(--warning);
+}
+
+.status-strip[data-tone="error"] {
+  color: var(--danger);
+}
+
+.admin-form,
+.editor-layout,
+.editor-toolbar,
+.editor-block,
+.editor-grid,
+.editor-repeater,
+.row-actions {
+  display: grid;
+  gap: 14px;
+}
+
+.editor-toolbar {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+}
+
+.editor-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.editor-block {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.editor-block h3,
+.editor-block h4 {
+  margin: 0;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  color: var(--text-faint);
+  font-size: 0.86rem;
+  letter-spacing: 0.06em;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.field--compact textarea {
+  min-height: 84px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+.button-row,
+.row-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.button-row .button,
+.row-actions .button {
+  cursor: pointer;
+}
+
+.button-plain {
+  background: transparent;
+  color: var(--text);
+}
+
+.button-danger {
+  border-color: rgba(255, 184, 184, 0.35);
+  color: var(--danger);
+}
+
+.admin-meta {
+  color: var(--text-faint);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 960px) {
+  .editor-grid,
+  .editor-toolbar {
+    grid-template-columns: 1fr;
+  }
+}

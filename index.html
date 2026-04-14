@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Union Transparency Portal</title>
+    <meta
+      name="description"
+      content="A bilingual transparency portal for student union governance, activities, and public reporting."
+    />
+    <link rel="icon" type="image/png" href="/assets/schoolent-icon.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="#top" aria-label="Student Union Transparency Portal home">
+          <img class="brand-mark" src="/assets/KZID.jpg" alt="Student Union logo" />
+          <div>
+            <p class="brand-kicker">STUDENT UNION</p>
+            <h1 id="brandName">Transparency Portal</h1>
+          </div>
+        </a>
+        <div class="topbar-actions">
+          <nav class="topnav" aria-label="Primary">
+            <a href="#organization" data-nav="organization">架构</a>
+            <a href="#activities" data-nav="activities">活动</a>
+            <a href="#finance" data-nav="finance">数据</a>
+            <a href="#initiatives" data-nav="initiatives">提案</a>
+            <a href="#publications" data-nav="publications">纪要</a>
+          </nav>
+          <div class="lang-switch" role="group" aria-label="Language switcher">
+            <button class="lang-pill is-active" type="button" data-lang-trigger="zh">中文</button>
+            <button class="lang-pill" type="button" data-lang-trigger="en">EN</button>
+          </div>
+          <a class="ghost-link" href="/admin/">Admin</a>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="hero-grid">
+          <div class="hero-copy">
+            <p class="section-label" id="heroBadge">CAMPAIGN PLATFORM</p>
+            <h2 class="hero-title" id="heroTitle">Loading...</h2>
+            <p class="hero-subtitle" id="heroSubtitle"></p>
+            <p class="hero-promise" id="heroPromise"></p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#finance" id="primaryAction">透明公开</a>
+              <a class="button button-secondary" href="#initiatives" id="secondaryAction">提案跟进</a>
+            </div>
+          </div>
+          <aside class="hero-panel">
+            <div class="panel-frame">
+              <p class="panel-label" id="siteTagline">Public governance, published clearly.</p>
+              <dl class="metric-grid" id="metricGrid"></dl>
+            </div>
+          </aside>
+        </section>
+
+        <section class="notice-strip" id="noticeStrip" hidden></section>
+
+        <section class="content-section" id="organization">
+          <div class="section-header">
+            <p class="section-label" id="organizationLabel">STRUCTURE</p>
+            <h3 id="organizationHeading"></h3>
+            <p id="organizationIntro"></p>
+          </div>
+          <div class="card-grid" id="organizationGrid"></div>
+        </section>
+
+        <section class="content-section" id="activities">
+          <div class="section-header">
+            <p class="section-label" id="activitiesLabel">RECENT ACTIVITY</p>
+            <h3 id="activitiesHeading"></h3>
+            <p id="activitiesIntro"></p>
+          </div>
+          <div class="timeline-list" id="activitiesList"></div>
+        </section>
+
+        <section class="content-section" id="finance">
+          <div class="section-header">
+            <p class="section-label" id="financeLabel">DATA / FINANCE</p>
+            <h3 id="financeHeading"></h3>
+            <p id="financeIntro"></p>
+          </div>
+          <div id="financeContainer"></div>
+        </section>
+
+        <section class="content-section" id="initiatives">
+          <div class="section-header">
+            <p class="section-label" id="initiativesLabel">PROPOSAL TRACKER</p>
+            <h3 id="initiativesHeading"></h3>
+            <p id="initiativesIntro"></p>
+          </div>
+          <div class="proposal-grid" id="initiativesGrid"></div>
+        </section>
+
+        <section class="content-section" id="publications">
+          <div class="section-header">
+            <p class="section-label" id="publicationsLabel">PUBLIC NOTES</p>
+            <h3 id="publicationsHeading"></h3>
+            <p id="publicationsIntro"></p>
+          </div>
+          <div class="publication-grid" id="publicationsGrid"></div>
+        </section>
+      </main>
+
+      <footer class="site-footer" id="siteFooter"></footer>
+    </div>
+
+    <template id="emptyStateTemplate">
+      <div class="empty-state">
+        <p class="empty-title">No published items yet.</p>
+        <p class="empty-copy">This module is ready for updates from the admin panel.</p>
+      </div>
+    </template>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

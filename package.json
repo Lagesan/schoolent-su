@@ -1,0 +1,14 @@
+{
+  "name": "schoolent-su-portal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev .",
+    "deploy": "wrangler pages deploy .",
+    "check:js": "node --check app.js && node --check admin/admin.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.12.0"
+  }
+}
