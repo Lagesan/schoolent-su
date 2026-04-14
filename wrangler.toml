@@ -2,8 +2,7 @@ name = "schoolent-su-portal"
 compatibility_date = "2026-04-14"
 pages_build_output_dir = "."
 
-# Bind the D1 database as `DB` in Cloudflare Pages or uncomment below for local Wrangler config.
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "schoolent-su"
-# database_id = "replace-with-your-d1-database-id"
+[[d1_databases]]
+binding = "DB"
+database_name = "db"
+database_id = "10dd995a-f56b-469e-ade5-1106a8ad0e9f"
