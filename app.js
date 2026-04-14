@@ -100,12 +100,12 @@ const ui = {
 };
 
 const socialIcons = {
-  globe: "◎",
-  instagram: "◐",
-  xiaohongshu: "✦",
-  wechat: "◌",
-  bilibili: "▷",
-  github: "◫",
+  globe: "GL",
+  instagram: "IG",
+  xiaohongshu: "RED",
+  wechat: "WX",
+  bilibili: "B",
+  github: "GH",
   email: "@",
   default: "•"
 };
@@ -191,8 +191,8 @@ function render() {
   dom.brandName.textContent = pick(content.site.shortName);
   dom.heroBadge.textContent = pick(content.hero.badge);
   dom.heroTitle.textContent = pick(content.hero.title);
-  dom.heroSubtitle.textContent = pick(content.hero.subtitle);
-  dom.heroPromise.textContent = pick(content.hero.promise);
+  setOptionalText(dom.heroSubtitle, pick(content.hero.subtitle));
+  setOptionalText(dom.heroPromise, pick(content.hero.promise));
   dom.primaryAction.textContent = pick(content.hero.ctaPrimary);
   dom.secondaryAction.textContent = pick(content.hero.ctaSecondary);
   dom.siteTagline.textContent = pick(content.site.tagline);
@@ -208,15 +208,15 @@ function render() {
   dom.publicationsLabel.textContent = language.labels.publications.toUpperCase();
 
   dom.organizationHeading.textContent = pick(content.organization.heading);
-  dom.organizationIntro.textContent = pick(content.organization.intro);
+  setOptionalText(dom.organizationIntro, pick(content.organization.intro));
   dom.activitiesHeading.textContent = pick(content.activities.heading);
-  dom.activitiesIntro.textContent = pick(content.activities.intro);
+  setOptionalText(dom.activitiesIntro, pick(content.activities.intro));
   dom.financeHeading.textContent = pick(content.finance.heading);
-  dom.financeIntro.textContent = pick(content.finance.intro);
+  setOptionalText(dom.financeIntro, pick(content.finance.intro));
   dom.initiativesHeading.textContent = pick(content.initiatives.heading);
-  dom.initiativesIntro.textContent = pick(content.initiatives.intro);
+  setOptionalText(dom.initiativesIntro, pick(content.initiatives.intro));
   dom.publicationsHeading.textContent = pick(content.publications.heading);
-  dom.publicationsIntro.textContent = pick(content.publications.intro);
+  setOptionalText(dom.publicationsIntro, pick(content.publications.intro));
 
   renderMetrics(content, language);
   renderNotices(content.notices);
@@ -501,6 +501,12 @@ function renderFooter(content, meta, language) {
 
 function resolveSocialIcon(icon) {
   return socialIcons[icon] || socialIcons.default;
+}
+
+function setOptionalText(node, value) {
+  const text = String(value || "").trim();
+  node.textContent = text;
+  node.hidden = text.length === 0;
 }
 
 function emptyState() {

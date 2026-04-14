@@ -11,13 +11,13 @@ const dom = {
 };
 
 const socialIconOptions = [
-  ["globe", "站点 / Globe"],
-  ["wechat", "WeChat"],
-  ["instagram", "Instagram"],
-  ["xiaohongshu", "Xiaohongshu"],
-  ["bilibili", "Bilibili"],
-  ["github", "GitHub"],
-  ["email", "Email"]
+  ["globe", "GL / 站点"],
+  ["wechat", "WX / WeChat"],
+  ["instagram", "IG / Instagram"],
+  ["xiaohongshu", "RED / Xiaohongshu"],
+  ["bilibili", "B / Bilibili"],
+  ["github", "GH / GitHub"],
+  ["email", "@ / Email"]
 ];
 
 const factories = {
@@ -647,12 +647,12 @@ function selectField(label, path, value, options) {
 
 function resolveIconPreview(icon) {
   const map = {
-    globe: "◎",
-    wechat: "◌",
-    instagram: "◐",
-    xiaohongshu: "✦",
-    bilibili: "▷",
-    github: "◫",
+    globe: "GL",
+    wechat: "WX",
+    instagram: "IG",
+    xiaohongshu: "RED",
+    bilibili: "B",
+    github: "GH",
     email: "@"
   };
   return map[icon] || "•";

@@ -573,9 +573,18 @@ select {
 }
 
 .social-icon {
-  width: 20px;
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  color: var(--text-faint);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 @media (max-width: 960px) {

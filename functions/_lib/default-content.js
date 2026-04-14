@@ -92,10 +92,7 @@ export function createDefaultContent() {
         "组织结构、近期活动、提案进度和公开数据集中展示，让学生知道资源去了哪里，项目推进到了哪一步。",
         "Show structure, activities, proposal status, and public-facing data in one place so students can see where resources go and how work moves."
       ),
-      promise: localized(
-        "平台默认支持双语、后台发布和手动财务修正字段，也为后续接 AI 总结、答疑或自动周报保留了接口位置。",
-        "The portal ships with bilingual pages, admin publishing, manual finance overrides, and an API surface ready for future AI summaries or assistant features."
-      ),
+      promise: localized("", ""),
       ctaPrimary: localized("查看透明数据", "View transparency data"),
       ctaSecondary: localized("跟进提案状态", "Track proposals")
     },
@@ -153,10 +150,7 @@ export function createDefaultContent() {
     },
     activities: {
       heading: localized("近期活动看板", "Recent activity board"),
-      intro: localized(
-        "让学生看到学生会最近正在做什么，而不是只在活动结束后才知道。",
-        "Show what the union is actively working on instead of only posting after events finish."
-      ),
+      intro: localized("", ""),
       items: [
         {
           title: localized("透明预算说明会", "Budget transparency town hall"),
@@ -238,10 +232,7 @@ export function createDefaultContent() {
     },
     initiatives: {
       heading: localized("提案追踪台", "Proposal tracker"),
-      intro: localized(
-        "除了活动和财务，学生更关心意见有没有被处理。这个模块可以展示提案状态、负责人和下一步。",
-        "Students also care whether feedback is being processed. This module tracks proposal status, owner, and next step."
-      ),
+      intro: localized("", ""),
       items: [
         {
           title: localized("建立提案响应 SLA", "Set a proposal response SLA"),
@@ -265,10 +256,7 @@ export function createDefaultContent() {
     },
     publications: {
       heading: localized("公开纪要与说明", "Public notes and updates"),
-      intro: localized(
-        "适合放会议纪要、工作周报、规则说明和公开声明，形成持续的透明记录。",
-        "Use this section for meeting notes, weekly briefs, policy explainers, and public statements."
-      ),
+      intro: localized("", ""),
       items: [
         {
           title: localized("透明门户上线说明", "Portal launch note"),
@@ -405,7 +393,7 @@ function normalizeSocialLink(value, fallback) {
 export function normalizeContent(value = {}) {
   const fallback = createDefaultContent();
   const legacyTeams = Array.isArray(value.organization?.teams) ? value.organization.teams : [];
-  const departmentSeed = Array.isArray(value.organization?.departments) && value.organization.departments.length
+  const departmentSeed = Array.isArray(value.organization?.departments)
     ? value.organization.departments
     : legacyTeams;
 
@@ -425,7 +413,7 @@ export function normalizeContent(value = {}) {
       ctaPrimary: normalizeLocalized(value.hero?.ctaPrimary, fallback.hero.ctaPrimary),
       ctaSecondary: normalizeLocalized(value.hero?.ctaSecondary, fallback.hero.ctaSecondary)
     },
-    notices: Array.isArray(value.notices) && value.notices.length
+    notices: Array.isArray(value.notices)
       ? value.notices.map((item) => normalizeNotice(item, noticeTemplate()))
       : fallback.notices.map((item) => normalizeNotice(item, noticeTemplate())),
     organization: {
@@ -435,14 +423,14 @@ export function normalizeContent(value = {}) {
         value.organization?.leadership || legacyTeams[0],
         fallback.organization.leadership
       ),
-      departments: departmentSeed.length
+      departments: Array.isArray(departmentSeed)
         ? departmentSeed.map((item) => normalizeDepartment(item, departmentTemplate()))
         : fallback.organization.departments.map((item) => normalizeDepartment(item, departmentTemplate()))
     },
     activities: {
       heading: normalizeLocalized(value.activities?.heading, fallback.activities.heading),
       intro: normalizeLocalized(value.activities?.intro, fallback.activities.intro),
-      items: Array.isArray(value.activities?.items) && value.activities.items.length
+      items: Array.isArray(value.activities?.items)
         ? value.activities.items.map((item) => normalizeActivity(item, activityTemplate()))
         : fallback.activities.items.map((item) => normalizeActivity(item, activityTemplate()))
     },
@@ -459,28 +447,28 @@ export function normalizeContent(value = {}) {
         available: normalizeNumber(value.finance?.totals?.available, fallback.finance.totals.available),
         reserve: normalizeNumber(value.finance?.totals?.reserve, fallback.finance.totals.reserve)
       },
-      categories: Array.isArray(value.finance?.categories) && value.finance.categories.length
+      categories: Array.isArray(value.finance?.categories)
         ? value.finance.categories.map((item) => normalizeFinanceCategory(item, financeCategoryTemplate()))
         : fallback.finance.categories.map((item) => normalizeFinanceCategory(item, financeCategoryTemplate()))
     },
     initiatives: {
       heading: normalizeLocalized(value.initiatives?.heading, fallback.initiatives.heading),
       intro: normalizeLocalized(value.initiatives?.intro, fallback.initiatives.intro),
-      items: Array.isArray(value.initiatives?.items) && value.initiatives.items.length
+      items: Array.isArray(value.initiatives?.items)
         ? value.initiatives.items.map((item) => normalizeInitiative(item, initiativeTemplate()))
         : fallback.initiatives.items.map((item) => normalizeInitiative(item, initiativeTemplate()))
     },
     publications: {
       heading: normalizeLocalized(value.publications?.heading, fallback.publications.heading),
       intro: normalizeLocalized(value.publications?.intro, fallback.publications.intro),
-      items: Array.isArray(value.publications?.items) && value.publications.items.length
+      items: Array.isArray(value.publications?.items)
         ? value.publications.items.map((item) => normalizePublication(item, publicationTemplate()))
         : fallback.publications.items.map((item) => normalizePublication(item, publicationTemplate()))
     },
     footer: {
       presidentEmail: normalizeString(value.footer?.presidentEmail || value.footer?.contactEmail, fallback.footer.presidentEmail),
       statement: normalizeLocalized(value.footer?.statement, fallback.footer.statement),
-      socialLinks: Array.isArray(value.footer?.socialLinks) && value.footer.socialLinks.length
+      socialLinks: Array.isArray(value.footer?.socialLinks)
         ? value.footer.socialLinks.map((item) => normalizeSocialLink(item, socialLinkTemplate()))
         : fallback.footer.socialLinks.map((item) => normalizeSocialLink(item, socialLinkTemplate()))
     },
