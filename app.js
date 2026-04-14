@@ -472,7 +472,9 @@ function renderFooter(content, meta, language) {
 
   dom.siteFooter.innerHTML = `
     <div class="footer-brand">
-      <img class="footer-brand-image" src="/assets/schoolent-icon.png" alt="Schoolent" />
+      <div class="footer-brand-tile">
+        <img class="footer-brand-image" src="/assets/schoolent-icon.png" alt="Schoolent" />
+      </div>
       <div class="footer-brand-copy">
         <p>${escapeHtml(statement)}</p>
         <p>${escapeHtml(language.common.footerPrefix)}: ${escapeHtml(content.footer.presidentEmail)}</p>
