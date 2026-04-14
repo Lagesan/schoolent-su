@@ -301,7 +301,7 @@ select {
   margin-bottom: 40px;
   padding: 16px 24px;
   border: 1px solid var(--warning);
-  background: rgba(245, 215, 110, 0.05);
+  background: rgba(140, 140, 140, 0.05);
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
@@ -584,8 +584,6 @@ select {
   width: min(100%, 240px);
   aspect-ratio: 1 / 1;
   object-fit: contain;
-  filter: grayscale(100%) contrast(1.2);
-  /* 图片去色，增强严肃感 */
 }
 
 .footer-brand-copy {
