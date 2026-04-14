@@ -25,18 +25,24 @@ export async function getContentRecord(env) {
     .first();
 
   if (!row) {
+    const seeded = await initializeContentRecord(env);
     return {
-      content: normalizeContent(createDefaultContent()),
-      updatedAt: null,
-      storage: "fallback"
+      content: seeded.content,
+      updatedAt: seeded.updatedAt,
+      storage: "d1"
     };
   }
 
   let parsed;
   try {
-    parsed = JSON.parse(row.content_json);
+    parsed = row.content_json ? JSON.parse(row.content_json) : createDefaultContent();
   } catch {
-    parsed = createDefaultContent();
+    const seeded = await initializeContentRecord(env);
+    return {
+      content: seeded.content,
+      updatedAt: seeded.updatedAt,
+      storage: "d1"
+    };
   }
 
   return {
@@ -75,21 +81,26 @@ export async function saveContentRecord(env, content) {
 
 async function ensureDatabase(env) {
   await env.DB.prepare(SCHEMA).run();
+}
 
-  const existing = await env.DB.prepare("SELECT id FROM content_store WHERE id = ?1")
-    .bind(RECORD_ID)
-    .first();
-
-  if (existing) {
-    return;
-  }
-
+async function initializeContentRecord(env) {
   const seeded = normalizeContent(createDefaultContent());
   const updatedAt = new Date().toISOString();
 
   await env.DB.prepare(
-    "INSERT INTO content_store (id, content_json, updated_at) VALUES (?1, ?2, ?3)"
+    `
+      INSERT INTO content_store (id, content_json, updated_at)
+      VALUES (?1, ?2, ?3)
+      ON CONFLICT(id) DO UPDATE SET
+        content_json = excluded.content_json,
+        updated_at = excluded.updated_at
+    `
   )
     .bind(RECORD_ID, JSON.stringify(seeded), updatedAt)
     .run();
+
+  return {
+    content: seeded,
+    updatedAt
+  };
 }

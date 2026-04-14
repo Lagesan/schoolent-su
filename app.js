@@ -225,9 +225,11 @@ function renderLanguageSwitch() {
 }
 
 function renderMetrics(content, language) {
-  const publishedActivities = content.activities.items.filter((item) => item.published).length;
+  const activityItems = Array.isArray(content.activities?.items) ? content.activities.items : [];
+  const departmentItems = Array.isArray(content.organization?.departments) ? content.organization.departments : [];
+  const publishedActivities = activityItems.filter((item) => item.published).length;
   const metrics = [
-    { label: language.metrics.teams, value: content.organization.departments.length + 1 },
+    { label: language.metrics.teams, value: departmentItems.length + 1 },
     { label: language.metrics.activities, value: publishedActivities },
     {
       label: language.metrics.finance,
@@ -252,7 +254,7 @@ function renderMetrics(content, language) {
 }
 
 function renderNotices(notices) {
-  const activeNotices = notices.filter((notice) => notice.active);
+  const activeNotices = (Array.isArray(notices) ? notices : []).filter((notice) => notice.active);
   if (!activeNotices.length) {
     dom.noticeStrip.hidden = true;
     dom.noticeStrip.innerHTML = "";
@@ -308,7 +310,7 @@ function renderOrganization(organization, language) {
 }
 
 function renderActivities(items) {
-  const published = items.filter((item) => item.published);
+  const published = (Array.isArray(items) ? items : []).filter((item) => item.published);
   if (!published.length) {
     dom.activitiesList.innerHTML = emptyState();
     return;
@@ -403,12 +405,13 @@ function renderFinance(finance, language) {
 }
 
 function renderInitiatives(items) {
-  if (!items.length) {
+  const safeItems = Array.isArray(items) ? items : [];
+  if (!safeItems.length) {
     dom.initiativesGrid.innerHTML = emptyState();
     return;
   }
 
-  dom.initiativesGrid.innerHTML = items
+  dom.initiativesGrid.innerHTML = safeItems
     .map(
       (item) => `
         <article class="proposal-card">
@@ -425,12 +428,13 @@ function renderInitiatives(items) {
 }
 
 function renderPublications(items) {
-  if (!items.length) {
+  const safeItems = Array.isArray(items) ? items : [];
+  if (!safeItems.length) {
     dom.publicationsGrid.innerHTML = emptyState();
     return;
   }
 
-  dom.publicationsGrid.innerHTML = items
+  dom.publicationsGrid.innerHTML = safeItems
     .map(
       (item) => `
         <article class="publication-card">
@@ -491,6 +495,16 @@ function renderFooter(content, meta, language) {
 
 function resolveSocialIcon(icon) {
   return socialIcons[icon] || socialIcons.default;
+}
+
+function setOptionalText(node, value) {
+  if (!node) {
+    return;
+  }
+
+  const text = String(value || "").trim();
+  node.textContent = text;
+  node.hidden = text.length === 0;
 }
 
 
