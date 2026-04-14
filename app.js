@@ -152,7 +152,9 @@ init();
 
 async function init() {
   renderLanguageSwitch();
-  dom.heroTitle.textContent = ui[state.lang].common.loading;
+  if (dom.heroTitle) {
+    dom.heroTitle.textContent = ui[state.lang].common.loading;
+  }
 
   try {
     const response = await fetch("/api/content");
@@ -166,9 +168,15 @@ async function init() {
     render();
   } catch (error) {
     console.error(error);
-    dom.heroTitle.textContent = ui[state.lang].common.error;
-    dom.heroSubtitle.textContent = "";
-    dom.heroPromise.textContent = "";
+    if (dom.heroTitle) {
+      dom.heroTitle.textContent = ui[state.lang].common.error;
+    }
+    if (dom.heroSubtitle) {
+      dom.heroSubtitle.textContent = "";
+    }
+    if (dom.heroPromise) {
+      dom.heroPromise.textContent = "";
+    }
   }
 }
 
@@ -181,32 +189,34 @@ function render() {
   const { content, meta } = state;
 
   document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
-  document.title = `${pick(content.site.shortName)} | ${pick(content.site.tagline)}`;
+  const shortName = pick(content.site?.shortName) || "Student Union Portal";
+  const tagline = pick(content.site?.tagline);
+  document.title = tagline ? `${shortName} | ${tagline}` : shortName;
 
-  dom.brandName.textContent = pick(content.site.shortName);
-  dom.heroBadge.textContent = pick(content.hero.badge);
-  dom.heroTitle.textContent = pick(content.hero.title);
-  setOptionalText(dom.heroSubtitle, pick(content.hero.subtitle));
-  setOptionalText(dom.heroPromise, pick(content.hero.promise));
-  dom.primaryAction.textContent = pick(content.hero.ctaPrimary);
-  dom.secondaryAction.textContent = pick(content.hero.ctaSecondary);
-  dom.siteTagline.textContent = pick(content.site.tagline);
+  setText(dom.brandName, shortName);
+  setText(dom.heroBadge, pick(content.hero?.badge));
+  setText(dom.heroTitle, pick(content.hero?.title));
+  setOptionalText(dom.heroSubtitle, pick(content.hero?.subtitle));
+  setOptionalText(dom.heroPromise, pick(content.hero?.promise));
+  setText(dom.primaryAction, pick(content.hero?.ctaPrimary));
+  setText(dom.secondaryAction, pick(content.hero?.ctaSecondary));
+  setText(dom.siteTagline, pick(content.site?.tagline));
 
   document.querySelectorAll("[data-nav]").forEach((item) => {
     item.textContent = language.nav[item.dataset.nav];
   });
 
-  dom.organizationLabel.textContent = language.labels.organization.toUpperCase();
-  dom.activitiesLabel.textContent = language.labels.activities.toUpperCase();
-  dom.financeLabel.textContent = language.labels.finance.toUpperCase();
-  dom.initiativesLabel.textContent = language.labels.initiatives.toUpperCase();
-  dom.publicationsLabel.textContent = language.labels.publications.toUpperCase();
+  setText(dom.organizationLabel, language.labels.organization.toUpperCase());
+  setText(dom.activitiesLabel, language.labels.activities.toUpperCase());
+  setText(dom.financeLabel, language.labels.finance.toUpperCase());
+  setText(dom.initiativesLabel, language.labels.initiatives.toUpperCase());
+  setText(dom.publicationsLabel, language.labels.publications.toUpperCase());
 
-  dom.organizationHeading.textContent = pick(content.organization.heading);
-  dom.activitiesHeading.textContent = pick(content.activities.heading);
-  dom.financeHeading.textContent = pick(content.finance.heading);
-  dom.initiativesHeading.textContent = pick(content.initiatives.heading);
-  dom.publicationsHeading.textContent = pick(content.publications.heading);
+  setText(dom.organizationHeading, pick(content.organization?.heading));
+  setText(dom.activitiesHeading, pick(content.activities?.heading));
+  setText(dom.financeHeading, pick(content.finance?.heading));
+  setText(dom.initiativesHeading, pick(content.initiatives?.heading));
+  setText(dom.publicationsHeading, pick(content.publications?.heading));
 
   renderMetrics(content, language);
   renderNotices(content.notices);
@@ -227,9 +237,10 @@ function renderLanguageSwitch() {
 function renderMetrics(content, language) {
   const activityItems = Array.isArray(content.activities?.items) ? content.activities.items : [];
   const departmentItems = Array.isArray(content.organization?.departments) ? content.organization.departments : [];
+  const hasLeadership = Boolean(pick(content.organization?.leadership?.title) || pick(content.organization?.leadership?.lead));
   const publishedActivities = activityItems.filter((item) => item.published).length;
   const metrics = [
-    { label: language.metrics.teams, value: departmentItems.length + 1 },
+    { label: language.metrics.teams, value: departmentItems.length + (hasLeadership ? 1 : 0) },
     { label: language.metrics.activities, value: publishedActivities },
     {
       label: language.metrics.finance,
@@ -273,23 +284,25 @@ function renderNotices(notices) {
 }
 
 function renderOrganization(organization, language) {
-  const root = organization.leadership;
-  const departments = organization.departments || [];
+  const root = organization?.leadership || {};
+  const departments = Array.isArray(organization?.departments) ? organization.departments : [];
+  const hasRootContent = Boolean(pick(root.title) || pick(root.lead) || pick(root.scope));
 
-  if (!root || !departments.length) {
+  if (!hasRootContent && !departments.length) {
     dom.organizationChart.innerHTML = emptyState();
     return;
   }
 
   dom.organizationChart.innerHTML = `
     <article class="org-map">
+      ${hasRootContent ? `
       <div class="org-root">
-        <p class="tag">${escapeHtml(root.status)}</p>
+        <p class="tag">${escapeHtml(root.status || "CORE")}</p>
         <h4>${escapeHtml(pick(root.title))}</h4>
-        <p class="org-lead">${escapeHtml(pick(root.lead))}</p>
-        <p class="org-copy">${escapeHtml(pick(root.scope))}</p>
+        ${renderOptionalParagraph("org-lead", pick(root.lead))}
+        ${renderOptionalParagraph("org-copy", pick(root.scope))}
       </div>
-      <div class="org-rail" aria-hidden="true"></div>
+      <div class="org-rail" aria-hidden="true"></div>` : ""}
       <div class="org-grid">
         ${departments
           .map(
@@ -334,6 +347,9 @@ function renderActivities(items) {
 }
 
 function renderFinance(finance, language) {
+  const categories = Array.isArray(finance?.categories) ? finance.categories : [];
+  const totals = finance?.totals || {};
+
   if (!finance.published) {
     dom.financeContainer.innerHTML = `
       <article class="finance-panel">
@@ -364,15 +380,15 @@ function renderFinance(finance, language) {
       <div class="finance-number-grid">
         <div class="finance-number">
           <span>${escapeHtml(language.finance.budget)}</span>
-          <strong>${escapeHtml(formatCurrency(finance.totals.budget))}</strong>
+          <strong>${escapeHtml(formatCurrency(totals.budget))}</strong>
         </div>
         <div class="finance-number">
           <span>${escapeHtml(language.finance.available)}</span>
-          <strong>${escapeHtml(formatCurrency(finance.totals.available))}</strong>
+          <strong>${escapeHtml(formatCurrency(totals.available))}</strong>
         </div>
         <div class="finance-number">
           <span>${escapeHtml(language.finance.reserve)}</span>
-          <strong>${escapeHtml(formatCurrency(finance.totals.reserve))}</strong>
+          <strong>${escapeHtml(formatCurrency(totals.reserve))}</strong>
         </div>
       </div>
       <table class="finance-table">
@@ -384,7 +400,7 @@ function renderFinance(finance, language) {
           </tr>
         </thead>
         <tbody>
-          ${finance.categories
+          ${categories
             .map(
               (item) => `
                 <tr>
@@ -451,10 +467,11 @@ function renderPublications(items) {
 }
 
 function renderFooter(content, meta, language) {
-  const statement = pick(content.footer.statement);
+  const statement = pick(content.footer?.statement);
   const updated = meta?.updatedAt ? formatDate(meta.updatedAt, true) : "N/A";
   const badges = [];
-  const links = (content.footer.socialLinks || []).filter((item) => item.url);
+  const links = (Array.isArray(content.footer?.socialLinks) ? content.footer.socialLinks : []).filter((item) => item.url);
+  const email = content.footer?.presidentEmail || "";
 
   if (content.settings.aiReady) {
     badges.push(language.common.aiReady);
@@ -470,10 +487,10 @@ function renderFooter(content, meta, language) {
         <img class="footer-brand-image" src="/assets/schoolent-icon.png" alt="Schoolent" />
       </div>
       <div class="footer-brand-copy">
-        <p>${escapeHtml(statement)}</p>
-        <p>${escapeHtml(language.common.footerPrefix)}: ${escapeHtml(content.footer.presidentEmail)}</p>
+        ${statement ? `<p>${escapeHtml(statement)}</p>` : ""}
+        ${email ? `<p>${escapeHtml(language.common.footerPrefix)}: ${escapeHtml(email)}</p>` : ""}
         <p>${escapeHtml(language.common.updatedAt)}: ${escapeHtml(updated)}</p>
-        <div class="footer-socials">
+        <div class="footer-socials" ${links.length ? "" : "hidden"}>
           ${links
             .map(
               (link) => `
@@ -485,7 +502,7 @@ function renderFooter(content, meta, language) {
             )
             .join("")}
         </div>
-        <div class="footer-badges">
+        <div class="footer-badges" ${badges.length ? "" : "hidden"}>
           ${badges.map((badge) => `<p class="tag">${escapeHtml(badge)}</p>`).join("")}
         </div>
       </div>
@@ -497,6 +514,14 @@ function resolveSocialIcon(icon) {
   return socialIcons[icon] || socialIcons.default;
 }
 
+function setText(node, value) {
+  if (!node) {
+    return;
+  }
+
+  node.textContent = String(value || "");
+}
+
 function setOptionalText(node, value) {
   if (!node) {
     return;
@@ -505,6 +530,11 @@ function setOptionalText(node, value) {
   const text = String(value || "").trim();
   node.textContent = text;
   node.hidden = text.length === 0;
+}
+
+function renderOptionalParagraph(className, value) {
+  const text = String(value || "").trim();
+  return text ? `<p class="${className}">${escapeHtml(text)}</p>` : "";
 }
 
 
