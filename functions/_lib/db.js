@@ -1,13 +1,8 @@
 import { createDefaultContent, normalizeContent } from "./default-content.js";
 
 const RECORD_ID = "portal";
-const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS content_store (
-    id TEXT PRIMARY KEY,
-    content_json TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  );
-`;
+const SCHEMA =
+  "CREATE TABLE IF NOT EXISTS content_store (id TEXT PRIMARY KEY, content_json TEXT NOT NULL, updated_at TEXT NOT NULL);";
 
 function hasDatabase(env) {
   return Boolean(env?.DB && typeof env.DB.prepare === "function");
@@ -79,7 +74,7 @@ export async function saveContentRecord(env, content) {
 }
 
 async function ensureDatabase(env) {
-  await env.DB.exec(SCHEMA);
+  await env.DB.prepare(SCHEMA).run();
 
   const existing = await env.DB.prepare("SELECT id FROM content_store WHERE id = ?1")
     .bind(RECORD_ID)
