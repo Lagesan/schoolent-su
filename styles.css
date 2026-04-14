@@ -301,7 +301,7 @@ select {
   margin-bottom: 40px;
   padding: 16px 24px;
   border: 1px solid var(--warning);
-  background: #a0a0a0;
+  background: rgba(245, 215, 110, 0.05);
   display: flex;
   gap: 12px;
   flex-wrap: wrap;

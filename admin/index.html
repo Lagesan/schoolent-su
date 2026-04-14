@@ -1,42 +1,45 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Portal Admin</title>
-    <link rel="icon" type="image/png" href="/assets/schoolent-icon.png" />
-    <link rel="stylesheet" href="/styles.css" />
-    <link rel="stylesheet" href="/admin/admin.css" />
-  </head>
-  <body>
-    <div class="page-shell admin-shell">
-      <header class="topbar">
-        <a class="brand" href="/" aria-label="Back to portal">
-          <img class="brand-mark" src="/assets/Kunzhong.jpeg" alt="Kunzhong logo" />
-          <div>
-            <p class="brand-kicker">STUDENT UNION</p>
-            <h1>Portal Admin</h1>
-          </div>
-        </a>
-        <div class="topbar-actions">
-          <a class="ghost-link" href="/">View Site</a>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Admin</title>
+  <link rel="icon" type="image/png" href="/assets/schoolent-icon.png" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+
+<body>
+  <div class="page-shell admin-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Back to portal">
+        <img class="brand-mark" src="/assets/Kunzhong.jpeg" alt="Kunzhong logo" />
+        <div>
+          <p class="brand-kicker">STUDENT UNION</p>
+          <h1>Portal Admin</h1>
         </div>
-      </header>
+      </a>
+      <div class="topbar-actions">
+        <a class="ghost-link" href="/">View Site</a>
+      </div>
+    </header>
 
-      <main class="admin-main">
-        <section class="admin-intro">
-          <p class="section-label">CONTENT OPERATIONS</p>
-          <h2>后台发布台</h2>
-          <p>这里可以直接改双语文案、关系图、活动、财务展示、底部社媒和公开纪要。组织关系与社媒都改成了更像列表的可视化编辑方式，发布和后续维护会更顺手。</p>
-        </section>
+    <main class="admin-main">
+      <section class="admin-intro">
+        <p class="section-label">CONTENT OPERATIONS</p>
+        <h2>后台发布台</h2>
+        <p>这里可以直接改双语文案、关系图、活动、财务展示、底部社媒和公开纪要。</p>
+      </section>
 
-        <section id="adminStatus" class="status-strip">Checking session...</section>
+      <section id="adminStatus" class="status-strip">Checking session...</section>
 
-        <section id="loginPanel" class="admin-card"></section>
-        <section id="editorPanel" class="admin-card" hidden></section>
-      </main>
-    </div>
+      <section id="loginPanel" class="admin-card"></section>
+      <section id="editorPanel" class="admin-card" hidden></section>
+    </main>
+  </div>
 
-    <script type="module" src="/admin/admin.js"></script>
-  </body>
+  <script type="module" src="/admin/admin.js"></script>
+</body>
+
 </html>

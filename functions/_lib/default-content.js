@@ -76,13 +76,13 @@ function leadershipTemplate() {
 export function createDefaultContent() {
   return {
     site: {
-      name: localized("昆仲学生会透明门户", "Kunzhong Student Union Transparency Portal"),
-      shortName: localized("学生会透明门户", "Union Transparency Portal"),
+      name: localized("昆中国际部学生会", "KZID Student Union"),
+      shortName: localized("KSU", "Union Transparency Portal"),
       tagline: localized("把组织运作放到阳光下。", "Put student governance in the open."),
       domain: "union.example.edu",
       campaignNote: localized(
-        "这是一个适合竞选展示、后续也能直接转入真实运营的透明门户样板。",
-        "This starter works both as a campaign demo and as a real operations portal."
+        "竞选中，等待最新信息",
+        "Electing, waiting for the latest info."
       )
     },
     hero: {
@@ -97,7 +97,7 @@ export function createDefaultContent() {
       ctaSecondary: localized("跟进提案状态", "Track proposals")
     },
     notices: [
-      
+
     ],
     organization: {
       heading: localized("学生会组织关系图", "Student union relationship map"),
