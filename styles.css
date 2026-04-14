@@ -83,11 +83,11 @@ select {
 }
 
 .brand-mark {
-  width: 62px;
-  height: 62px;
+  width: 72px;
+  height: 72px;
   object-fit: cover;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 20px;
   background: #fff;
 }
 
@@ -137,7 +137,8 @@ select {
 .topnav a:hover,
 .ghost-link:hover,
 .lang-pill:hover,
-.button:hover {
+.button:hover,
+.social-link:hover {
   border-color: var(--line-strong);
   background: rgba(255, 255, 255, 0.05);
   transform: translateY(-1px);
@@ -169,14 +170,16 @@ select {
 
 .hero-copy,
 .panel-frame,
-.card,
 .timeline-item,
 .finance-panel,
 .proposal-card,
 .publication-card,
 .empty-state,
 .status-strip,
-.admin-card {
+.admin-card,
+.org-map,
+.org-root,
+.org-node {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -206,7 +209,9 @@ select {
 .publication-summary,
 .site-footer,
 .status-strip,
-.admin-intro p {
+.admin-intro p,
+.org-copy,
+.org-lead {
   color: var(--text-muted);
   line-height: 1.7;
 }
@@ -304,7 +309,6 @@ select {
   font-size: clamp(1.8rem, 5vw, 3rem);
 }
 
-.card-grid,
 .proposal-grid,
 .publication-grid {
   display: grid;
@@ -312,21 +316,20 @@ select {
   gap: 18px;
 }
 
-.card,
 .proposal-card,
 .publication-card {
   padding: 24px;
 }
 
-.card h4,
 .proposal-card h4,
 .publication-card h4,
-.timeline-title {
+.timeline-title,
+.org-root h4,
+.org-node h4 {
   margin: 0 0 10px;
   font-size: 1.12rem;
 }
 
-.card-meta,
 .timeline-meta,
 .proposal-meta,
 .publication-meta,
@@ -344,12 +347,83 @@ select {
   gap: 16px;
 }
 
-.timeline-item {
+.timeline-item,
+.finance-panel {
   padding: 22px 24px;
 }
 
-.finance-panel {
+.organization-shell {
+  display: grid;
+}
+
+.org-map {
+  padding: 28px;
+  position: relative;
+}
+
+.org-root {
+  max-width: 360px;
+  margin: 0 auto;
   padding: 24px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.org-rail {
+  width: 2px;
+  height: 48px;
+  margin: 0 auto;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.08));
+}
+
+.org-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  position: relative;
+}
+
+.org-grid::before {
+  content: "";
+  position: absolute;
+  top: -24px;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.14));
+}
+
+.org-node {
+  padding: 22px;
+  position: relative;
+}
+
+.org-node::before {
+  content: "";
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  width: 2px;
+  height: 24px;
+  transform: translateX(-50%);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.1));
+}
+
+.org-link-label {
+  color: var(--text-faint);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.org-lead {
+  margin: 0 0 8px;
+}
+
+.org-copy {
+  margin: 0;
 }
 
 .finance-headline {
@@ -438,12 +512,57 @@ select {
   border-top: 1px solid var(--line);
 }
 
+.footer-brand {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.footer-brand-image {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 28px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 16px;
+}
+
+.footer-brand-copy p {
+  margin: 0 0 10px;
+}
+
+.footer-socials,
+.footer-badges {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.social-icon {
+  width: 20px;
+  text-align: center;
+  color: var(--text-faint);
+}
+
 @media (max-width: 960px) {
   .hero-grid,
-  .card-grid,
   .proposal-grid,
   .publication-grid,
-  .finance-number-grid {
+  .finance-number-grid,
+  .org-grid,
+  .footer-brand {
     grid-template-columns: 1fr;
   }
 
@@ -457,8 +576,14 @@ select {
     justify-content: flex-start;
   }
 
-  .hero-copy {
+  .hero-copy,
+  .org-map {
     padding: 28px;
+  }
+
+  .org-grid::before,
+  .org-node::before {
+    display: none;
   }
 }
 

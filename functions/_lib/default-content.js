@@ -2,11 +2,11 @@ function localized(zh, en) {
   return { zh, en };
 }
 
-function teamTemplate() {
+function departmentTemplate() {
   return {
-    title: localized("部门名称", "Team name"),
+    title: localized("新部门", "New department"),
     lead: localized("负责人", "Lead"),
-    scope: localized("负责范围", "Scope"),
+    scope: localized("负责范围", "Describe responsibilities."),
     status: "ACTIVE"
   };
 }
@@ -56,6 +56,23 @@ function noticeTemplate() {
   };
 }
 
+function socialLinkTemplate() {
+  return {
+    label: localized("新社媒", "New social"),
+    icon: "globe",
+    url: ""
+  };
+}
+
+function leadershipTemplate() {
+  return {
+    title: localized("学生会主席团", "Student Union Leadership"),
+    lead: localized("会长 / 主席团", "President / Executive Board"),
+    scope: localized("负责总体战略、资源统筹、公开承诺兑现与跨部门协调。", "Own strategy, resource allocation, public commitments, and coordination across departments."),
+    status: "CORE"
+  };
+}
+
 export function createDefaultContent() {
   return {
     site: {
@@ -101,15 +118,16 @@ export function createDefaultContent() {
       }
     ],
     organization: {
-      heading: localized("学生会组织架构", "Student union structure"),
+      heading: localized("学生会组织关系图", "Student union relationship map"),
       intro: localized(
-        "用卡片式结构介绍部门职责，学生可以快速知道谁在负责什么、当前重点是什么。",
-        "Present each team in a clear card layout so students can quickly see ownership and current priorities."
+        "用关系图而不是平铺卡片，直接展示会长与各部门之间的协作连接，便于同学理解职责和汇报链路。",
+        "Use a relationship map instead of flat cards so students can quickly read responsibilities and reporting lines."
       ),
-      teams: [
+      leadership: leadershipTemplate(),
+      departments: [
         {
           title: localized("秘书处", "Secretariat"),
-          lead: localized("主席团 / 秘书长", "Executive desk / Secretary General"),
+          lead: localized("秘书长", "Secretary General"),
           scope: localized("统筹会议节奏、项目跟进与跨部门协同。", "Coordinate meetings, follow-ups, and cross-team operations."),
           status: "ACTIVE"
         },
@@ -273,12 +291,28 @@ export function createDefaultContent() {
       ]
     },
     footer: {
-      contactEmail: "union@example.edu",
-      officeHours: localized("工作时间：周一至周五 12:30 - 18:00", "Office hours: Mon-Fri 12:30 - 18:00"),
+      presidentEmail: "president@example.edu",
       statement: localized(
         "透明不是一次性动作，而是一套持续发布、持续回应的工作机制。",
         "Transparency is not a one-off announcement. It is a repeatable publishing and response system."
-      )
+      ),
+      socialLinks: [
+        {
+          label: localized("学生会主页", "Union homepage"),
+          icon: "globe",
+          url: "https://example.edu/union"
+        },
+        {
+          label: localized("微信公众号", "WeChat"),
+          icon: "wechat",
+          url: "https://example.edu/wechat"
+        },
+        {
+          label: localized("Instagram", "Instagram"),
+          icon: "instagram",
+          url: "https://instagram.com/example"
+        }
+      ]
     },
     settings: {
       aiReady: true
@@ -314,7 +348,7 @@ function normalizeNotice(value, fallback) {
   };
 }
 
-function normalizeTeam(value, fallback) {
+function normalizeDepartment(value, fallback) {
   return {
     title: normalizeLocalized(value?.title, fallback.title),
     lead: normalizeLocalized(value?.lead, fallback.lead),
@@ -360,8 +394,20 @@ function normalizePublication(value, fallback) {
   };
 }
 
+function normalizeSocialLink(value, fallback) {
+  return {
+    label: normalizeLocalized(value?.label, fallback.label),
+    icon: normalizeString(value?.icon, fallback.icon),
+    url: normalizeString(value?.url, fallback.url)
+  };
+}
+
 export function normalizeContent(value = {}) {
   const fallback = createDefaultContent();
+  const legacyTeams = Array.isArray(value.organization?.teams) ? value.organization.teams : [];
+  const departmentSeed = Array.isArray(value.organization?.departments) && value.organization.departments.length
+    ? value.organization.departments
+    : legacyTeams;
 
   return {
     site: {
@@ -385,9 +431,13 @@ export function normalizeContent(value = {}) {
     organization: {
       heading: normalizeLocalized(value.organization?.heading, fallback.organization.heading),
       intro: normalizeLocalized(value.organization?.intro, fallback.organization.intro),
-      teams: Array.isArray(value.organization?.teams) && value.organization.teams.length
-        ? value.organization.teams.map((item) => normalizeTeam(item, teamTemplate()))
-        : fallback.organization.teams.map((item) => normalizeTeam(item, teamTemplate()))
+      leadership: normalizeDepartment(
+        value.organization?.leadership || legacyTeams[0],
+        fallback.organization.leadership
+      ),
+      departments: departmentSeed.length
+        ? departmentSeed.map((item) => normalizeDepartment(item, departmentTemplate()))
+        : fallback.organization.departments.map((item) => normalizeDepartment(item, departmentTemplate()))
     },
     activities: {
       heading: normalizeLocalized(value.activities?.heading, fallback.activities.heading),
@@ -428,9 +478,11 @@ export function normalizeContent(value = {}) {
         : fallback.publications.items.map((item) => normalizePublication(item, publicationTemplate()))
     },
     footer: {
-      contactEmail: normalizeString(value.footer?.contactEmail, fallback.footer.contactEmail),
-      officeHours: normalizeLocalized(value.footer?.officeHours, fallback.footer.officeHours),
-      statement: normalizeLocalized(value.footer?.statement, fallback.footer.statement)
+      presidentEmail: normalizeString(value.footer?.presidentEmail || value.footer?.contactEmail, fallback.footer.presidentEmail),
+      statement: normalizeLocalized(value.footer?.statement, fallback.footer.statement),
+      socialLinks: Array.isArray(value.footer?.socialLinks) && value.footer.socialLinks.length
+        ? value.footer.socialLinks.map((item) => normalizeSocialLink(item, socialLinkTemplate()))
+        : fallback.footer.socialLinks.map((item) => normalizeSocialLink(item, socialLinkTemplate()))
     },
     settings: {
       aiReady: normalizeBoolean(value.settings?.aiReady, fallback.settings.aiReady)

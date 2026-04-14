@@ -10,14 +10,24 @@ const dom = {
   editorPanel: document.querySelector("#editorPanel")
 };
 
+const socialIconOptions = [
+  ["globe", "站点 / Globe"],
+  ["wechat", "WeChat"],
+  ["instagram", "Instagram"],
+  ["xiaohongshu", "Xiaohongshu"],
+  ["bilibili", "Bilibili"],
+  ["github", "GitHub"],
+  ["email", "Email"]
+];
+
 const factories = {
   notices: () => ({
     active: true,
     label: { zh: "新公告", en: "New notice" },
     message: { zh: "填写新的公告内容。", en: "Add a new public notice." }
   }),
-  "organization.teams": () => ({
-    title: { zh: "新部门", en: "New team" },
+  "organization.departments": () => ({
+    title: { zh: "新部门", en: "New department" },
     lead: { zh: "负责人", en: "Lead" },
     scope: { zh: "负责范围", en: "Describe responsibilities." },
     status: "ACTIVE"
@@ -46,6 +56,11 @@ const factories = {
     date: new Date().toISOString(),
     tag: "UPDATE",
     summary: { zh: "填写纪要内容。", en: "Add a public note." }
+  }),
+  "footer.socialLinks": () => ({
+    label: { zh: "新社媒", en: "New social" },
+    icon: "globe",
+    url: ""
   })
 };
 
@@ -121,6 +136,10 @@ async function loadEditor() {
 function renderEditor() {
   dom.loginPanel.hidden = true;
   dom.editorPanel.hidden = false;
+
+  const leadership = state.content.organization.leadership;
+  const departments = state.content.organization.departments;
+
   dom.editorPanel.innerHTML = `
     <div class="editor-layout">
       <div class="editor-toolbar">
@@ -130,7 +149,7 @@ function renderEditor() {
       </div>
       <p class="admin-meta">最近发布时间：${escapeHtml(formatDate(state.meta?.updatedAt))}</p>
 
-      <section class="editor-block">
+      <section class="editor-section">
         <h3>站点信息</h3>
         <div class="editor-grid">
           ${localizedFields("站点名称", "site.name", state.content.site.name)}
@@ -141,7 +160,7 @@ function renderEditor() {
         </div>
       </section>
 
-      <section class="editor-block">
+      <section class="editor-section">
         <h3>首页 Hero</h3>
         <div class="editor-grid">
           ${localizedFields("眉标", "hero.badge", state.content.hero.badge)}
@@ -153,94 +172,144 @@ function renderEditor() {
         </div>
       </section>
 
-      <section class="editor-block">
+      <section class="editor-section">
         <h3>顶部公告</h3>
-        <div class="editor-repeater">
+        <p class="help-copy">每一项像列表一样展开编辑，常用操作会更顺手。</p>
+        <div class="stack-list">
           ${state.content.notices
-            .map(
-              (notice, index) => `
-                <article class="editor-block">
+            .map((notice, index) =>
+              listItem({
+                title: pickLocal(notice.label),
+                meta: notice.active ? "已显示" : "已隐藏",
+                body: `
                   <div class="checkbox-row">
                     <input id="notice-active-${index}" type="checkbox" data-path="notices[${index}].active" ${notice.active ? "checked" : ""} />
                     <label for="notice-active-${index}">启用这条公告</label>
                   </div>
-                  <div class="editor-grid">
-                    ${localizedFields("标签", `notices[${index}].label`, notice.label)}
-                    ${localizedFields("内容", `notices[${index}].message`, notice.message, true)}
+                  <div class="list-body">
+                    <div class="editor-grid">
+                      ${localizedFields("标签", `notices[${index}].label`, notice.label)}
+                      ${localizedFields("内容", `notices[${index}].message`, notice.message, true)}
+                    </div>
+                    <div class="row-actions">
+                      <button class="button button-danger" type="button" data-action="remove" data-array-path="notices" data-index="${index}">删除公告</button>
+                    </div>
                   </div>
-                  <div class="row-actions">
-                    <button class="button button-danger" type="button" data-action="remove" data-array-path="notices" data-index="${index}">删除公告</button>
-                  </div>
-                </article>
-              `
+                `
+              })
             )
             .join("")}
+        </div>
+        <div class="row-actions">
           <button class="button button-secondary" type="button" data-action="add" data-array-path="notices">新增公告</button>
         </div>
       </section>
 
-      <section class="editor-block">
-        <h3>组织架构</h3>
+      <section class="editor-section">
+        <h3>组织关系图</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "organization.heading", state.content.organization.heading)}
           ${localizedFields("模块说明", "organization.intro", state.content.organization.intro, true)}
         </div>
-        <div class="editor-repeater">
-          ${state.content.organization.teams
-            .map(
-              (team, index) => `
-                <article class="editor-block">
-                  <div class="editor-grid">
-                    ${localizedFields("部门名称", `organization.teams[${index}].title`, team.title)}
-                    ${localizedFields("负责人", `organization.teams[${index}].lead`, team.lead)}
-                    ${localizedFields("负责范围", `organization.teams[${index}].scope`, team.scope, true)}
-                    ${inputField("状态标签", `organization.teams[${index}].status`, team.status)}
+
+        <div class="editor-card">
+          <h4>核心节点</h4>
+          <div class="editor-grid">
+            ${localizedFields("核心节点名称", "organization.leadership.title", leadership.title)}
+            ${localizedFields("负责人", "organization.leadership.lead", leadership.lead)}
+            ${localizedFields("负责范围", "organization.leadership.scope", leadership.scope, true)}
+            ${inputField("状态标签", "organization.leadership.status", leadership.status)}
+          </div>
+        </div>
+
+        <div class="editor-card">
+          <h4>关系图预览</h4>
+          <div class="preview-grid">
+            <div class="preview-node">
+              <strong>${escapeHtml(pickLocal(leadership.title))}</strong>
+              <span>${escapeHtml(pickLocal(leadership.lead))}</span>
+            </div>
+            ${departments
+              .map(
+                (department) => `
+                  <div class="preview-node">
+                    <strong>${escapeHtml(pickLocal(department.title))}</strong>
+                    <span>${escapeHtml(pickLocal(department.lead))}</span>
                   </div>
-                  <div class="row-actions">
-                    <button class="button button-danger" type="button" data-action="remove" data-array-path="organization.teams" data-index="${index}">删除部门</button>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+
+        <div class="stack-list">
+          ${departments
+            .map((department, index) =>
+              listItem({
+                title: pickLocal(department.title),
+                meta: department.status,
+                body: `
+                  <div class="list-body">
+                    <div class="editor-grid">
+                      ${localizedFields("部门名称", `organization.departments[${index}].title`, department.title)}
+                      ${localizedFields("负责人", `organization.departments[${index}].lead`, department.lead)}
+                      ${localizedFields("负责范围", `organization.departments[${index}].scope`, department.scope, true)}
+                      ${inputField("状态标签", `organization.departments[${index}].status`, department.status)}
+                    </div>
+                    <div class="row-actions">
+                      <button class="button button-danger" type="button" data-action="remove" data-array-path="organization.departments" data-index="${index}">删除部门</button>
+                    </div>
                   </div>
-                </article>
-              `
+                `
+              })
             )
             .join("")}
-          <button class="button button-secondary" type="button" data-action="add" data-array-path="organization.teams">新增部门</button>
+        </div>
+        <div class="row-actions">
+          <button class="button button-secondary" type="button" data-action="add" data-array-path="organization.departments">新增部门节点</button>
         </div>
       </section>
 
-      <section class="editor-block">
+      <section class="editor-section">
         <h3>近期活动</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "activities.heading", state.content.activities.heading)}
           ${localizedFields("模块说明", "activities.intro", state.content.activities.intro, true)}
         </div>
-        <div class="editor-repeater">
+        <div class="stack-list">
           ${state.content.activities.items
-            .map(
-              (item, index) => `
-                <article class="editor-block">
+            .map((item, index) =>
+              listItem({
+                title: pickLocal(item.title),
+                meta: `${item.status} / ${item.published ? "已公开" : "未公开"}`,
+                body: `
                   <div class="checkbox-row">
                     <input id="activity-published-${index}" type="checkbox" data-path="activities.items[${index}].published" ${item.published ? "checked" : ""} />
                     <label for="activity-published-${index}">前台公开显示</label>
                   </div>
-                  <div class="editor-grid">
-                    ${localizedFields("活动名称", `activities.items[${index}].title`, item.title)}
-                    ${inputField("日期时间", `activities.items[${index}].date`, item.date)}
-                    ${localizedFields("地点", `activities.items[${index}].location`, item.location)}
-                    ${inputField("状态标签", `activities.items[${index}].status`, item.status)}
-                    ${localizedFields("活动简介", `activities.items[${index}].summary`, item.summary, true)}
+                  <div class="list-body">
+                    <div class="editor-grid">
+                      ${localizedFields("活动名称", `activities.items[${index}].title`, item.title)}
+                      ${inputField("日期时间", `activities.items[${index}].date`, item.date)}
+                      ${localizedFields("地点", `activities.items[${index}].location`, item.location)}
+                      ${inputField("状态标签", `activities.items[${index}].status`, item.status)}
+                      ${localizedFields("活动简介", `activities.items[${index}].summary`, item.summary, true)}
+                    </div>
+                    <div class="row-actions">
+                      <button class="button button-danger" type="button" data-action="remove" data-array-path="activities.items" data-index="${index}">删除活动</button>
+                    </div>
                   </div>
-                  <div class="row-actions">
-                    <button class="button button-danger" type="button" data-action="remove" data-array-path="activities.items" data-index="${index}">删除活动</button>
-                  </div>
-                </article>
-              `
+                `
+              })
             )
             .join("")}
+        </div>
+        <div class="row-actions">
           <button class="button button-secondary" type="button" data-action="add" data-array-path="activities.items">新增活动</button>
         </div>
       </section>
 
-      <section class="editor-block">
+      <section class="editor-section">
         <h3>财务公开</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "finance.heading", state.content.finance.heading)}
@@ -257,89 +326,135 @@ function renderEditor() {
           <input id="finance-published" type="checkbox" data-path="finance.published" ${state.content.finance.published ? "checked" : ""} />
           <label for="finance-published">前台显示详细财务数据</label>
         </div>
-        <div class="editor-repeater">
+        <div class="stack-list">
           ${state.content.finance.categories
-            .map(
-              (item, index) => `
-                <article class="editor-block">
-                  <div class="editor-grid">
-                    ${localizedFields("分类名称", `finance.categories[${index}].label`, item.label)}
-                    ${numberField("金额", `finance.categories[${index}].amount`, item.amount)}
-                    ${localizedFields("备注", `finance.categories[${index}].note`, item.note, true)}
+            .map((item, index) =>
+              listItem({
+                title: pickLocal(item.label),
+                meta: String(item.amount),
+                body: `
+                  <div class="list-body">
+                    <div class="editor-grid">
+                      ${localizedFields("分类名称", `finance.categories[${index}].label`, item.label)}
+                      ${numberField("金额", `finance.categories[${index}].amount`, item.amount)}
+                      ${localizedFields("备注", `finance.categories[${index}].note`, item.note, true)}
+                    </div>
+                    <div class="row-actions">
+                      <button class="button button-danger" type="button" data-action="remove" data-array-path="finance.categories" data-index="${index}">删除分类</button>
+                    </div>
                   </div>
-                  <div class="row-actions">
-                    <button class="button button-danger" type="button" data-action="remove" data-array-path="finance.categories" data-index="${index}">删除分类</button>
-                  </div>
-                </article>
-              `
+                `
+              })
             )
             .join("")}
+        </div>
+        <div class="row-actions">
           <button class="button button-secondary" type="button" data-action="add" data-array-path="finance.categories">新增财务分类</button>
         </div>
       </section>
 
-      <section class="editor-block">
+      <section class="editor-section">
         <h3>提案追踪</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "initiatives.heading", state.content.initiatives.heading)}
           ${localizedFields("模块说明", "initiatives.intro", state.content.initiatives.intro, true)}
         </div>
-        <div class="editor-repeater">
+        <div class="stack-list">
           ${state.content.initiatives.items
-            .map(
-              (item, index) => `
-                <article class="editor-block">
-                  <div class="editor-grid">
-                    ${localizedFields("提案名称", `initiatives.items[${index}].title`, item.title)}
-                    ${inputField("阶段标签", `initiatives.items[${index}].stage`, item.stage)}
-                    ${localizedFields("责任人", `initiatives.items[${index}].owner`, item.owner)}
-                    ${localizedFields("提案说明", `initiatives.items[${index}].summary`, item.summary, true)}
+            .map((item, index) =>
+              listItem({
+                title: pickLocal(item.title),
+                meta: item.stage,
+                body: `
+                  <div class="list-body">
+                    <div class="editor-grid">
+                      ${localizedFields("提案名称", `initiatives.items[${index}].title`, item.title)}
+                      ${inputField("阶段标签", `initiatives.items[${index}].stage`, item.stage)}
+                      ${localizedFields("责任人", `initiatives.items[${index}].owner`, item.owner)}
+                      ${localizedFields("提案说明", `initiatives.items[${index}].summary`, item.summary, true)}
+                    </div>
+                    <div class="row-actions">
+                      <button class="button button-danger" type="button" data-action="remove" data-array-path="initiatives.items" data-index="${index}">删除提案</button>
+                    </div>
                   </div>
-                  <div class="row-actions">
-                    <button class="button button-danger" type="button" data-action="remove" data-array-path="initiatives.items" data-index="${index}">删除提案</button>
-                  </div>
-                </article>
-              `
+                `
+              })
             )
             .join("")}
+        </div>
+        <div class="row-actions">
           <button class="button button-secondary" type="button" data-action="add" data-array-path="initiatives.items">新增提案</button>
         </div>
       </section>
 
-      <section class="editor-block">
+      <section class="editor-section">
         <h3>公开纪要</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "publications.heading", state.content.publications.heading)}
           ${localizedFields("模块说明", "publications.intro", state.content.publications.intro, true)}
         </div>
-        <div class="editor-repeater">
+        <div class="stack-list">
           ${state.content.publications.items
-            .map(
-              (item, index) => `
-                <article class="editor-block">
-                  <div class="editor-grid">
-                    ${localizedFields("纪要标题", `publications.items[${index}].title`, item.title)}
-                    ${inputField("日期时间", `publications.items[${index}].date`, item.date)}
-                    ${inputField("标签", `publications.items[${index}].tag`, item.tag)}
-                    ${localizedFields("摘要", `publications.items[${index}].summary`, item.summary, true)}
+            .map((item, index) =>
+              listItem({
+                title: pickLocal(item.title),
+                meta: item.tag,
+                body: `
+                  <div class="list-body">
+                    <div class="editor-grid">
+                      ${localizedFields("纪要标题", `publications.items[${index}].title`, item.title)}
+                      ${inputField("日期时间", `publications.items[${index}].date`, item.date)}
+                      ${inputField("标签", `publications.items[${index}].tag`, item.tag)}
+                      ${localizedFields("摘要", `publications.items[${index}].summary`, item.summary, true)}
+                    </div>
+                    <div class="row-actions">
+                      <button class="button button-danger" type="button" data-action="remove" data-array-path="publications.items" data-index="${index}">删除纪要</button>
+                    </div>
                   </div>
-                  <div class="row-actions">
-                    <button class="button button-danger" type="button" data-action="remove" data-array-path="publications.items" data-index="${index}">删除纪要</button>
-                  </div>
-                </article>
-              `
+                `
+              })
             )
             .join("")}
+        </div>
+        <div class="row-actions">
           <button class="button button-secondary" type="button" data-action="add" data-array-path="publications.items">新增纪要</button>
         </div>
       </section>
 
-      <section class="editor-block">
-        <h3>底部与开关</h3>
+      <section class="editor-section">
+        <h3>底部与社媒</h3>
         <div class="editor-grid">
-          ${inputField("联系邮箱", "footer.contactEmail", state.content.footer.contactEmail)}
-          ${localizedFields("开放时间", "footer.officeHours", state.content.footer.officeHours)}
+          ${inputField("会长邮箱", "footer.presidentEmail", state.content.footer.presidentEmail)}
           ${localizedFields("底部声明", "footer.statement", state.content.footer.statement, true)}
+        </div>
+        <div class="stack-list">
+          ${state.content.footer.socialLinks
+            .map((item, index) =>
+              listItem({
+                title: pickLocal(item.label),
+                meta: item.icon,
+                body: `
+                  <div class="list-body">
+                    <div class="editor-grid">
+                      ${localizedFields("平台名称", `footer.socialLinks[${index}].label`, item.label)}
+                      ${selectField("图标", `footer.socialLinks[${index}].icon`, item.icon, socialIconOptions)}
+                      ${inputField("链接 URL", `footer.socialLinks[${index}].url`, item.url)}
+                      <div class="field">
+                        <span>图标预览</span>
+                        <div class="icon-chip">${escapeHtml(item.icon)} / ${escapeHtml(resolveIconPreview(item.icon))}</div>
+                      </div>
+                    </div>
+                    <div class="row-actions">
+                      <button class="button button-danger" type="button" data-action="remove" data-array-path="footer.socialLinks" data-index="${index}">删除社媒</button>
+                    </div>
+                  </div>
+                `
+              })
+            )
+            .join("")}
+        </div>
+        <div class="row-actions">
+          <button class="button button-secondary" type="button" data-action="add" data-array-path="footer.socialLinks">新增社媒链接</button>
         </div>
         <div class="checkbox-row">
           <input id="setting-ai-ready" type="checkbox" data-path="settings.aiReady" ${state.content.settings.aiReady ? "checked" : ""} />
@@ -466,10 +581,23 @@ async function logout() {
   }
 }
 
-function localizedFields(label, path, value, multiline = false) {
+function listItem({ title, meta, body }) {
   return `
-    ${multiline ? textareaField(`${label}（中文）`, `${path}.zh`, value.zh) : inputField(`${label}（中文）`, `${path}.zh`, value.zh)}
-    ${multiline ? textareaField(`${label}（English）`, `${path}.en`, value.en) : inputField(`${label}（English）`, `${path}.en`, value.en)}
+    <details class="list-item">
+      <summary>
+        <span class="summary-title">${escapeHtml(title || "未命名")}</span>
+        <span class="summary-meta">${escapeHtml(meta || "")}</span>
+      </summary>
+      ${body}
+    </details>
+  `;
+}
+
+function localizedFields(label, path, value, multiline = false) {
+  const safeValue = value || { zh: "", en: "" };
+  return `
+    ${multiline ? textareaField(`${label}（中文）`, `${path}.zh`, safeValue.zh) : inputField(`${label}（中文）`, `${path}.zh`, safeValue.zh)}
+    ${multiline ? textareaField(`${label}（English）`, `${path}.en`, safeValue.en) : inputField(`${label}（English）`, `${path}.en`, safeValue.en)}
   `;
 }
 
@@ -498,6 +626,46 @@ function numberField(label, path, value) {
       <input type="number" data-path="${escapeHtml(path)}" value="${escapeHtml(String(value || 0))}" />
     </label>
   `;
+}
+
+function selectField(label, path, value, options) {
+  return `
+    <label class="field">
+      <span>${escapeHtml(label)}</span>
+      <select data-path="${escapeHtml(path)}">
+        ${options
+          .map(
+            ([optionValue, optionLabel]) => `
+              <option value="${escapeHtml(optionValue)}" ${optionValue === value ? "selected" : ""}>${escapeHtml(optionLabel)}</option>
+            `
+          )
+          .join("")}
+      </select>
+    </label>
+  `;
+}
+
+function resolveIconPreview(icon) {
+  const map = {
+    globe: "◎",
+    wechat: "◌",
+    instagram: "◐",
+    xiaohongshu: "✦",
+    bilibili: "▷",
+    github: "◫",
+    email: "@"
+  };
+  return map[icon] || "•";
+}
+
+function pickLocal(value) {
+  if (!value) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  return value.zh || value.en || "";
 }
 
 function setStatus(message, tone = "warn") {

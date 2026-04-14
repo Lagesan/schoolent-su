@@ -14,14 +14,14 @@ const ui = {
       publications: "纪要"
     },
     labels: {
-      organization: "组织架构",
+      organization: "组织关系",
       activities: "近期活动",
       finance: "透明数据",
       initiatives: "提案追踪",
       publications: "公开纪要"
     },
     metrics: {
-      teams: "工作单元",
+      teams: "部门节点",
       activities: "已发布活动",
       finance: "财务状态",
       ai: "AI 接口预留"
@@ -44,10 +44,11 @@ const ui = {
       loading: "正在加载内容…",
       error: "内容暂时加载失败，请稍后刷新。",
       noItems: "暂时还没有已发布内容。",
-      footerPrefix: "联系邮箱",
+      footerPrefix: "会长邮箱",
       updatedAt: "内容更新时间",
       aiReady: "已预留 AI / API 接口扩展位",
-      fallback: "当前显示的是默认样板数据。"
+      fallback: "当前显示的是默认样板数据。",
+      connect: "连接部门"
     }
   },
   en: {
@@ -59,14 +60,14 @@ const ui = {
       publications: "Notes"
     },
     labels: {
-      organization: "Organization",
+      organization: "Organization Map",
       activities: "Recent Activity",
       finance: "Transparency Data",
       initiatives: "Proposal Tracker",
       publications: "Public Notes"
     },
     metrics: {
-      teams: "Working Units",
+      teams: "Department Nodes",
       activities: "Published Updates",
       finance: "Finance Status",
       ai: "AI-Ready API"
@@ -89,12 +90,24 @@ const ui = {
       loading: "Loading portal content...",
       error: "Portal data is temporarily unavailable. Please refresh later.",
       noItems: "No published items yet.",
-      footerPrefix: "Contact",
+      footerPrefix: "President Email",
       updatedAt: "Updated",
       aiReady: "API surface is ready for future AI integrations",
-      fallback: "The site is currently showing seeded sample data."
+      fallback: "The site is currently showing seeded sample data.",
+      connect: "Connects with"
     }
   }
+};
+
+const socialIcons = {
+  globe: "◎",
+  instagram: "◐",
+  xiaohongshu: "✦",
+  wechat: "◌",
+  bilibili: "▷",
+  github: "◫",
+  email: "@",
+  default: "•"
 };
 
 const dom = {
@@ -111,7 +124,7 @@ const dom = {
   organizationLabel: document.querySelector("#organizationLabel"),
   organizationHeading: document.querySelector("#organizationHeading"),
   organizationIntro: document.querySelector("#organizationIntro"),
-  organizationGrid: document.querySelector("#organizationGrid"),
+  organizationChart: document.querySelector("#organizationChart"),
   activitiesLabel: document.querySelector("#activitiesLabel"),
   activitiesHeading: document.querySelector("#activitiesHeading"),
   activitiesIntro: document.querySelector("#activitiesIntro"),
@@ -207,7 +220,7 @@ function render() {
 
   renderMetrics(content, language);
   renderNotices(content.notices);
-  renderOrganization(content.organization.teams);
+  renderOrganization(content.organization, language);
   renderActivities(content.activities.items);
   renderFinance(content.finance, language);
   renderInitiatives(content.initiatives.items);
@@ -224,7 +237,7 @@ function renderLanguageSwitch() {
 function renderMetrics(content, language) {
   const publishedActivities = content.activities.items.filter((item) => item.published).length;
   const metrics = [
-    { label: language.metrics.teams, value: content.organization.teams.length },
+    { label: language.metrics.teams, value: content.organization.departments.length + 1 },
     { label: language.metrics.activities, value: publishedActivities },
     {
       label: language.metrics.finance,
@@ -267,26 +280,41 @@ function renderNotices(notices) {
     .join("");
 }
 
-function renderOrganization(teams) {
-  if (!teams.length) {
-    dom.organizationGrid.innerHTML = emptyState();
+function renderOrganization(organization, language) {
+  const root = organization.leadership;
+  const departments = organization.departments || [];
+
+  if (!root || !departments.length) {
+    dom.organizationChart.innerHTML = emptyState();
     return;
   }
 
-  dom.organizationGrid.innerHTML = teams
-    .map(
-      (team) => `
-        <article class="card">
-          <p class="tag">${escapeHtml(team.status)}</p>
-          <h4>${escapeHtml(pick(team.title))}</h4>
-          <div class="card-meta">
-            <span>${escapeHtml(pick(team.lead))}</span>
-          </div>
-          <p>${escapeHtml(pick(team.scope))}</p>
-        </article>
-      `
-    )
-    .join("");
+  dom.organizationChart.innerHTML = `
+    <article class="org-map">
+      <div class="org-root">
+        <p class="tag">${escapeHtml(root.status)}</p>
+        <h4>${escapeHtml(pick(root.title))}</h4>
+        <p class="org-lead">${escapeHtml(pick(root.lead))}</p>
+        <p class="org-copy">${escapeHtml(pick(root.scope))}</p>
+      </div>
+      <div class="org-rail" aria-hidden="true"></div>
+      <div class="org-grid">
+        ${departments
+          .map(
+            (department) => `
+              <article class="org-node">
+                <div class="org-link-label">${escapeHtml(language.common.connect)}</div>
+                <p class="tag">${escapeHtml(department.status)}</p>
+                <h4>${escapeHtml(pick(department.title))}</h4>
+                <p class="org-lead">${escapeHtml(pick(department.lead))}</p>
+                <p class="org-copy">${escapeHtml(pick(department.scope))}</p>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </article>
+  `;
 }
 
 function renderActivities(items) {
@@ -430,9 +458,9 @@ function renderPublications(items) {
 
 function renderFooter(content, meta, language) {
   const statement = pick(content.footer.statement);
-  const officeHours = pick(content.footer.officeHours);
   const updated = meta?.updatedAt ? formatDate(meta.updatedAt, true) : "N/A";
   const badges = [];
+  const links = (content.footer.socialLinks || []).filter((item) => item.url);
 
   if (content.settings.aiReady) {
     badges.push(language.common.aiReady);
@@ -443,12 +471,34 @@ function renderFooter(content, meta, language) {
   }
 
   dom.siteFooter.innerHTML = `
-    <p>${escapeHtml(statement)}</p>
-    <p>${escapeHtml(language.common.footerPrefix)}: ${escapeHtml(content.footer.contactEmail)}</p>
-    <p>${escapeHtml(officeHours)}</p>
-    <p>${escapeHtml(language.common.updatedAt)}: ${escapeHtml(updated)}</p>
-    ${badges.map((badge) => `<p class="tag">${escapeHtml(badge)}</p>`).join("")}
+    <div class="footer-brand">
+      <img class="footer-brand-image" src="/assets/schoolent-icon.png" alt="Schoolent" />
+      <div class="footer-brand-copy">
+        <p>${escapeHtml(statement)}</p>
+        <p>${escapeHtml(language.common.footerPrefix)}: ${escapeHtml(content.footer.presidentEmail)}</p>
+        <p>${escapeHtml(language.common.updatedAt)}: ${escapeHtml(updated)}</p>
+        <div class="footer-socials">
+          ${links
+            .map(
+              (link) => `
+                <a class="social-link" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer">
+                  <span class="social-icon" aria-hidden="true">${escapeHtml(resolveSocialIcon(link.icon))}</span>
+                  <span>${escapeHtml(pick(link.label))}</span>
+                </a>
+              `
+            )
+            .join("")}
+        </div>
+        <div class="footer-badges">
+          ${badges.map((badge) => `<p class="tag">${escapeHtml(badge)}</p>`).join("")}
+        </div>
+      </div>
+    </div>
   `;
+}
+
+function resolveSocialIcon(icon) {
+  return socialIcons[icon] || socialIcons.default;
 }
 
 function emptyState() {
@@ -494,4 +544,8 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("`", "&#96;");
 }

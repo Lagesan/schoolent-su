@@ -31,10 +31,13 @@
 .admin-form,
 .editor-layout,
 .editor-toolbar,
-.editor-block,
 .editor-grid,
-.editor-repeater,
-.row-actions {
+.list-editor,
+.row-actions,
+.stack-list,
+.preview-grid,
+.editor-card,
+.list-header {
   display: grid;
   gap: 14px;
 }
@@ -44,20 +47,29 @@
   align-items: center;
 }
 
-.editor-grid {
+.editor-grid,
+.preview-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.editor-block {
+.editor-section,
+.list-item,
+.editor-card {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.025);
 }
 
-.editor-block h3,
-.editor-block h4 {
+.editor-section h3,
+.editor-card h4,
+.list-item summary {
   margin: 0;
+}
+
+.editor-section {
+  display: grid;
+  gap: 16px;
 }
 
 .field {
@@ -99,7 +111,8 @@
 }
 
 .button-row,
-.row-actions {
+.row-actions,
+.inline-badges {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
@@ -120,14 +133,73 @@
   color: var(--danger);
 }
 
-.admin-meta {
+.admin-meta,
+.help-copy {
   color: var(--text-faint);
   font-size: 0.9rem;
 }
 
+.list-item {
+  overflow: hidden;
+}
+
+.list-item summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.list-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary-title {
+  font-weight: 600;
+}
+
+.summary-meta {
+  color: var(--text-faint);
+  font-size: 0.84rem;
+}
+
+.list-body {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.preview-grid {
+  align-items: stretch;
+}
+
+.preview-node {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.preview-node strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.icon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
 @media (max-width: 960px) {
   .editor-grid,
-  .editor-toolbar {
+  .editor-toolbar,
+  .preview-grid {
     grid-template-columns: 1fr;
   }
 }
