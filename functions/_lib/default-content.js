@@ -76,10 +76,10 @@ function leadershipTemplate() {
 export function createDefaultContent() {
   return {
     site: {
-      name: localized("昆中国际部学生会", "KZID Student Union"),
-      shortName: localized("KSU", "Union Transparency Portal"),
+      name: localized("昆中国际部学生会", "KZID Student Council"),
+      shortName: localized("KSU", "Council Transparency Portal"),
       tagline: localized("把组织运作放到阳光下。", "Put student governance in the open."),
-      domain: "union.example.edu",
+      domain: "council.example.edu",
       campaignNote: localized(
         "竞选中，等待最新信息",
         "Electing, waiting for the latest info."
@@ -87,7 +87,7 @@ export function createDefaultContent() {
     },
     hero: {
       badge: localized("竞选主张 / 透明门户", "Campaign platform / transparency portal"),
-      title: localized("让学生会每一步都可被看见", "Make each student-union decision visible"),
+      title: localized("让学生会每一步都可被看见", "Make each student-council decision visible"),
       subtitle: localized(
         "组织结构、近期活动、提案进度和公开数据集中展示，让学生知道资源去了哪里，项目推进到了哪一步。",
         "Show structure, activities, proposal status, and public-facing data in one place so students can see where resources go and how work moves."
@@ -100,7 +100,7 @@ export function createDefaultContent() {
 
     ],
     organization: {
-      heading: localized("学生会组织关系图", "Student union relationship map"),
+      heading: localized("学生会组织关系图", "Student council relationship map"),
       intro: localized("", ""),
       leadership: leadershipTemplate(),
       departments: []

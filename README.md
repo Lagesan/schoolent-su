@@ -1,4 +1,4 @@
-# Student Union Transparency Portal
+# Student Council Transparency Portal
 
 面向学生会竞选与后续实际运营的双语透明门户，适配 Cloudflare Pages + Functions + D1 免费方案。
 

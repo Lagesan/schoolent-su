@@ -189,7 +189,7 @@ function render() {
   const { content, meta } = state;
 
   document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
-  const shortName = pick(content.site?.shortName) || "Student Union Portal";
+  const shortName = pick(content.site?.shortName) || "Student Council Portal";
   const tagline = pick(content.site?.tagline);
   document.title = tagline ? `${shortName} | ${tagline}` : shortName;
 
@@ -305,8 +305,8 @@ function renderOrganization(organization, language) {
       <div class="org-rail" aria-hidden="true"></div>` : ""}
       <div class="org-grid">
         ${departments
-          .map(
-            (department) => `
+      .map(
+        (department) => `
               <article class="org-node">
                 <div class="org-link-label">${escapeHtml(language.common.connect)}</div>
                 <p class="tag">${escapeHtml(department.status)}</p>
@@ -315,8 +315,8 @@ function renderOrganization(organization, language) {
                 <p class="org-copy">${escapeHtml(pick(department.scope))}</p>
               </article>
             `
-          )
-          .join("")}
+      )
+      .join("")}
       </div>
     </article>
   `;
@@ -401,16 +401,16 @@ function renderFinance(finance, language) {
         </thead>
         <tbody>
           ${categories
-            .map(
-              (item) => `
+      .map(
+        (item) => `
                 <tr>
                   <td>${escapeHtml(pick(item.label))}</td>
                   <td>${escapeHtml(formatCurrency(item.amount))}</td>
                   <td>${escapeHtml(pick(item.note))}</td>
                 </tr>
               `
-            )
-            .join("")}
+      )
+      .join("")}
         </tbody>
       </table>
       <p class="finance-disclaimer">
@@ -492,15 +492,15 @@ function renderFooter(content, meta, language) {
         <p>${escapeHtml(language.common.updatedAt)}: ${escapeHtml(updated)}</p>
         <div class="footer-socials" ${links.length ? "" : "hidden"}>
           ${links
-            .map(
-              (link) => `
+      .map(
+        (link) => `
                 <a class="social-link" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer">
                   <span class="social-icon" aria-hidden="true">${escapeHtml(resolveSocialIcon(link.icon))}</span>
                   <span>${escapeHtml(pick(link.label))}</span>
                 </a>
               `
-            )
-            .join("")}
+      )
+      .join("")}
         </div>
         <div class="footer-badges" ${badges.length ? "" : "hidden"}>
           ${badges.map((badge) => `<p class="tag">${escapeHtml(badge)}</p>`).join("")}
