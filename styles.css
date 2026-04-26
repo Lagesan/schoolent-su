@@ -316,6 +316,119 @@ select {
   font-weight: bold;
 }
 
+.app-mode-hub {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.app-surface,
+.app-summary-card,
+.app-action-chip {
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.app-surface {
+  padding: 24px;
+}
+
+.app-surface-head {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.app-surface-head h3,
+.app-spotlight-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  font-weight: 400;
+}
+
+.app-surface-copy,
+.app-bridge-note,
+.app-spotlight-meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.app-inline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.app-bridge-note {
+  margin-top: 16px;
+}
+
+.app-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.app-summary-card {
+  padding: 18px;
+}
+
+.app-summary-card p {
+  margin: 0 0 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
+
+.app-summary-card strong {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 400;
+}
+
+.app-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.app-action-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.app-action-chip:hover {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.app-action-chip.is-disabled,
+.app-action-chip:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.app-spotlight-meta {
+  margin-bottom: 10px;
+}
+
+.app-spotlight-title {
+  margin-bottom: 12px;
+}
+
 /* 内容区域划分 */
 .content-section {
   padding: 40px 0;
@@ -691,5 +804,100 @@ select {
 
   .hero-title {
     max-width: none;
+  }
+}
+
+body.is-app-shell .page-shell {
+  width: min(100vw, 720px);
+  padding: 0 0 calc(28px + env(safe-area-inset-bottom, 0px));
+}
+
+body.is-app-shell .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 18px 16px;
+  margin-bottom: 18px;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+body.is-app-shell .topnav,
+body.is-app-shell .ghost-link {
+  display: none;
+}
+
+body.is-app-shell .topbar-actions {
+  width: auto;
+  margin-left: auto;
+}
+
+body.is-app-shell main {
+  padding: 0 16px;
+}
+
+body.is-app-shell .hero-grid {
+  grid-template-columns: 1fr;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+body.is-app-shell .hero-copy,
+body.is-app-shell .panel-frame,
+body.is-app-shell .timeline-item,
+body.is-app-shell .finance-panel,
+body.is-app-shell .proposal-card,
+body.is-app-shell .publication-card,
+body.is-app-shell .org-map {
+  padding: 24px 20px;
+}
+
+body.is-app-shell .hero-title {
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  margin: 14px 0 16px;
+  max-width: none;
+}
+
+body.is-app-shell .hero-actions {
+  margin-top: 24px;
+}
+
+body.is-app-shell .hero-actions .button {
+  flex: 1 1 180px;
+}
+
+body.is-app-shell .content-section {
+  padding: 24px 0;
+}
+
+body.is-app-shell .section-header {
+  margin-bottom: 20px;
+}
+
+body.is-app-shell .proposal-grid,
+body.is-app-shell .publication-grid,
+body.is-app-shell .finance-number-grid,
+body.is-app-shell .org-grid {
+  grid-template-columns: 1fr;
+}
+
+body.is-app-shell .site-footer {
+  margin-top: 36px;
+  padding: 28px 16px 0;
+}
+
+@media (max-width: 640px) {
+  .app-summary-grid,
+  .app-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.is-app-shell .topbar {
+    padding-inline: 12px;
+  }
+
+  body.is-app-shell main,
+  body.is-app-shell .site-footer {
+    padding-inline: 12px;
   }
 }

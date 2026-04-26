@@ -1,7 +1,8 @@
 const state = {
-  lang: localStorage.getItem("portal-lang") || "zh",
+  lang: localStorage.getItem("portal-lang") || detectPreferredLanguage(),
   content: null,
-  meta: null
+  meta: null,
+  isAppShell: detectAppShell()
 };
 
 const ui = {
@@ -49,6 +50,25 @@ const ui = {
       aiReady: "已预留 AI / API 接口扩展位",
       fallback: "当前显示的是默认样板数据。",
       connect: "连接部门"
+    },
+    app: {
+      badge: "APP MODE / SCHOOLENT.CN",
+      heading: "移动端门户",
+      summary: "这个模式把门户压成更适合手机的摘要、快捷入口和操作卡片，而不是把桌面首页原样塞进 App。",
+      quickActions: "快捷操作",
+      overview: "一眼概览",
+      spotlight: "最新焦点",
+      openActivities: "查看活动",
+      openFinance: "财务摘要",
+      openProposals: "提案进度",
+      contactPresident: "联系会长",
+      sharePortal: "分享门户",
+      openCamera: "现场上传",
+      noBridge: "当前是在浏览器中预览 App 模式，原生分享和相机能力会在安卓容器里启用。",
+      nextActivity: "下一项活动",
+      latestProposal: "最近提案",
+      noticeCount: "有效通知",
+      noSpotlight: "发布第一条活动、提案或通知后，这里会自动变成移动端首页的焦点卡片。"
     }
   },
   en: {
@@ -95,6 +115,25 @@ const ui = {
       aiReady: "API surface is ready for future AI integrations",
       fallback: "The site is currently showing seeded sample data.",
       connect: "Connects with"
+    },
+    app: {
+      badge: "APP MODE / SCHOOLENT.CN",
+      heading: "Mobile Portal",
+      summary: "This mode compresses the portal into quick actions, summaries, and spotlight cards instead of mirroring the desktop homepage.",
+      quickActions: "Quick Actions",
+      overview: "Overview",
+      spotlight: "Spotlight",
+      openActivities: "Open Activity",
+      openFinance: "Finance Snapshot",
+      openProposals: "Proposal Status",
+      contactPresident: "Contact President",
+      sharePortal: "Share Portal",
+      openCamera: "Upload On Site",
+      noBridge: "You are previewing app mode in a browser. Native share and camera actions will be available inside the Android container.",
+      nextActivity: "Next Activity",
+      latestProposal: "Latest Proposal",
+      noticeCount: "Active Notices",
+      noSpotlight: "Once you publish an activity, proposal, or notice, this block becomes the mobile home spotlight."
     }
   }
 };
@@ -120,6 +159,7 @@ const dom = {
   secondaryAction: document.querySelector("#secondaryAction"),
   siteTagline: document.querySelector("#siteTagline"),
   metricGrid: document.querySelector("#metricGrid"),
+  appModeHub: document.querySelector("#appModeHub"),
   noticeStrip: document.querySelector("#noticeStrip"),
   organizationLabel: document.querySelector("#organizationLabel"),
   organizationHeading: document.querySelector("#organizationHeading"),
@@ -151,7 +191,10 @@ document.querySelectorAll("[data-lang-trigger]").forEach((button) => {
 init();
 
 async function init() {
+  document.body.classList.toggle("is-app-shell", state.isAppShell);
   renderLanguageSwitch();
+  setupAppModeActions();
+
   if (dom.heroTitle) {
     dom.heroTitle.textContent = ui[state.lang].common.loading;
   }
@@ -176,6 +219,16 @@ async function init() {
     }
     if (dom.heroPromise) {
       dom.heroPromise.textContent = "";
+    }
+    if (dom.appModeHub && state.isAppShell) {
+      dom.appModeHub.hidden = false;
+      dom.appModeHub.innerHTML = `
+        <article class="app-surface app-surface-primary">
+          <p class="section-label">${escapeHtml(ui[state.lang].app.badge)}</p>
+          <h3>${escapeHtml(ui[state.lang].common.error)}</h3>
+          <p class="app-surface-copy">${escapeHtml(ui[state.lang].app.noBridge)}</p>
+        </article>
+      `;
     }
   }
 }
@@ -218,13 +271,14 @@ function render() {
   setText(dom.initiativesHeading, pick(content.initiatives?.heading));
   setText(dom.publicationsHeading, pick(content.publications?.heading));
 
+  renderAppModeHub(content, language, meta);
   renderMetrics(content, language);
   renderNotices(content.notices);
   renderOrganization(content.organization, language);
-  renderActivities(content.activities.items);
+  renderActivities(content.activities?.items);
   renderFinance(content.finance, language);
-  renderInitiatives(content.initiatives.items);
-  renderPublications(content.publications.items);
+  renderInitiatives(content.initiatives?.items);
+  renderPublications(content.publications?.items);
   renderFooter(content, meta, language);
 }
 
@@ -234,15 +288,178 @@ function renderLanguageSwitch() {
   });
 }
 
+function renderAppModeHub(content, language, meta) {
+  if (!dom.appModeHub) {
+    return;
+  }
+
+  if (!state.isAppShell) {
+    dom.appModeHub.hidden = true;
+    dom.appModeHub.innerHTML = "";
+    return;
+  }
+
+  const publishedActivities = toArray(content.activities?.items).filter((item) => item.published);
+  const initiatives = toArray(content.initiatives?.items);
+  const activeNotices = toArray(content.notices).filter((notice) => notice.active);
+  const nextActivity = publishedActivities
+    .slice()
+    .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())[0];
+  const latestProposal = initiatives[0];
+  const email = content.footer?.presidentEmail || "";
+  const hasBridge = hasNativeBridge();
+  const appVersion = readAppVersion();
+  const spotlightTitle = pick(nextActivity?.title) || pick(latestProposal?.title) || "";
+  const spotlightMeta = nextActivity
+    ? `${language.app.nextActivity} · ${formatDate(nextActivity.date)}`
+    : latestProposal
+      ? `${language.app.latestProposal} · ${pick(latestProposal.owner)}`
+      : "";
+  const spotlightCopy = nextActivity
+    ? pick(nextActivity.summary)
+    : latestProposal
+      ? pick(latestProposal.summary)
+      : language.app.noSpotlight;
+  const summaryCards = [
+    {
+      label: language.app.noticeCount,
+      value: String(activeNotices.length)
+    },
+    {
+      label: language.metrics.activities,
+      value: String(publishedActivities.length)
+    },
+    {
+      label: language.metrics.finance,
+      value: content.finance?.published ? language.finance.published : language.finance.hidden
+    },
+    {
+      label: language.metrics.ai,
+      value: content.settings?.aiReady ? "READY" : "PENDING"
+    }
+  ];
+  const actionItems = [
+    {
+      type: "link",
+      href: "#activities",
+      label: language.app.openActivities
+    },
+    {
+      type: "link",
+      href: "#finance",
+      label: language.app.openFinance
+    },
+    {
+      type: "link",
+      href: "#initiatives",
+      label: language.app.openProposals
+    },
+    {
+      type: "mail",
+      href: email ? `mailto:${email}` : "#",
+      label: language.app.contactPresident,
+      disabled: !email
+    },
+    {
+      type: "button",
+      action: "share",
+      label: language.app.sharePortal
+    },
+    {
+      type: "button",
+      action: "camera",
+      label: language.app.openCamera,
+      disabled: !hasBridge
+    }
+  ];
+
+  dom.appModeHub.hidden = false;
+  dom.appModeHub.innerHTML = `
+    <article class="app-surface app-surface-primary">
+      <div class="app-surface-head">
+        <p class="section-label">${escapeHtml(language.app.badge)}</p>
+        <h3>${escapeHtml(pick(content.site?.shortName) || language.app.heading)}</h3>
+      </div>
+      <p class="app-surface-copy">${escapeHtml(pick(content.site?.campaignNote) || pick(content.hero?.subtitle) || language.app.summary)}</p>
+      <div class="app-inline-meta">
+        <span class="tag">schoolent.cn</span>
+        ${appVersion ? `<span class="tag">APP ${escapeHtml(appVersion)}</span>` : ""}
+        ${meta?.updatedAt ? `<span class="tag">${escapeHtml(formatDate(meta.updatedAt, true))}</span>` : ""}
+      </div>
+      <p class="app-bridge-note"${hasBridge ? " hidden" : ""}>${escapeHtml(language.app.noBridge)}</p>
+    </article>
+
+    <section class="app-surface">
+      <div class="app-surface-head">
+        <p class="section-label">${escapeHtml(language.app.overview.toUpperCase())}</p>
+        <h3>${escapeHtml(language.app.overview)}</h3>
+      </div>
+      <div class="app-summary-grid">
+        ${summaryCards
+          .map(
+            (card) => `
+              <article class="app-summary-card">
+                <p>${escapeHtml(card.label)}</p>
+                <strong>${escapeHtml(card.value)}</strong>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+
+    <section class="app-surface">
+      <div class="app-surface-head">
+        <p class="section-label">${escapeHtml(language.app.quickActions.toUpperCase())}</p>
+        <h3>${escapeHtml(language.app.quickActions)}</h3>
+      </div>
+      <div class="app-action-grid">
+        ${actionItems
+          .map((item) => {
+            if (item.type === "link") {
+              return `<a class="app-action-chip" href="${escapeAttribute(item.href)}">${escapeHtml(item.label)}</a>`;
+            }
+
+            if (item.type === "mail") {
+              const disabled = item.disabled ? ' aria-disabled="true" tabindex="-1"' : "";
+              const className = item.disabled ? "app-action-chip is-disabled" : "app-action-chip";
+              return `<a class="${className}" href="${escapeAttribute(item.href)}"${disabled}>${escapeHtml(item.label)}</a>`;
+            }
+
+            const disabled = item.disabled ? " disabled" : "";
+            return `<button class="app-action-chip" type="button" data-app-action="${escapeAttribute(item.action)}"${disabled}>${escapeHtml(item.label)}</button>`;
+          })
+          .join("")}
+      </div>
+    </section>
+
+    <section class="app-surface">
+      <div class="app-surface-head">
+        <p class="section-label">${escapeHtml(language.app.spotlight.toUpperCase())}</p>
+        <h3>${escapeHtml(language.app.spotlight)}</h3>
+      </div>
+      ${spotlightMeta ? `<p class="app-spotlight-meta">${escapeHtml(spotlightMeta)}</p>` : ""}
+      ${spotlightTitle ? `<h4 class="app-spotlight-title">${escapeHtml(spotlightTitle)}</h4>` : ""}
+      <p class="app-surface-copy">${escapeHtml(spotlightCopy)}</p>
+    </section>
+  `;
+}
+
 function renderMetrics(content, language) {
-  const activityItems = Array.isArray(content.activities?.items) ? content.activities.items : [];
-  const departmentItems = Array.isArray(content.organization?.departments) ? content.organization.departments : [];
+  const activityItems = toArray(content.activities?.items);
+  const departmentItems = toArray(content.organization?.departments);
   const hasLeadership = Boolean(pick(content.organization?.leadership?.title) || pick(content.organization?.leadership?.lead));
   const aiReady = Boolean(content.settings?.aiReady);
   const publishedActivities = activityItems.filter((item) => item.published).length;
   const metrics = [
-    { label: language.metrics.teams, value: departmentItems.length + (hasLeadership ? 1 : 0) },
-    { label: language.metrics.activities, value: publishedActivities },
+    {
+      label: language.metrics.teams,
+      value: departmentItems.length + (hasLeadership ? 1 : 0)
+    },
+    {
+      label: language.metrics.activities,
+      value: publishedActivities
+    },
     {
       label: language.metrics.finance,
       value: content.finance?.published ? language.finance.published : language.finance.hidden
@@ -252,6 +469,10 @@ function renderMetrics(content, language) {
       value: aiReady ? "READY" : "PENDING"
     }
   ];
+
+  if (!dom.metricGrid) {
+    return;
+  }
 
   dom.metricGrid.innerHTML = metrics
     .map(
@@ -266,7 +487,11 @@ function renderMetrics(content, language) {
 }
 
 function renderNotices(notices) {
-  const activeNotices = (Array.isArray(notices) ? notices : []).filter((notice) => notice.active);
+  if (!dom.noticeStrip) {
+    return;
+  }
+
+  const activeNotices = toArray(notices).filter((notice) => notice.active);
   if (!activeNotices.length) {
     dom.noticeStrip.hidden = true;
     dom.noticeStrip.innerHTML = "";
@@ -285,8 +510,12 @@ function renderNotices(notices) {
 }
 
 function renderOrganization(organization, language) {
+  if (!dom.organizationChart) {
+    return;
+  }
+
   const root = organization?.leadership || {};
-  const departments = Array.isArray(organization?.departments) ? organization.departments : [];
+  const departments = toArray(organization?.departments);
   const hasRootContent = Boolean(pick(root.title) || pick(root.lead) || pick(root.scope));
 
   if (!hasRootContent && !departments.length) {
@@ -297,34 +526,39 @@ function renderOrganization(organization, language) {
   dom.organizationChart.innerHTML = `
     <article class="org-map">
       ${hasRootContent ? `
-      <div class="org-root">
-        <p class="tag">${escapeHtml(root.status || "CORE")}</p>
-        <h4>${escapeHtml(pick(root.title))}</h4>
-        ${renderOptionalParagraph("org-lead", pick(root.lead))}
-        ${renderOptionalParagraph("org-copy", pick(root.scope))}
-      </div>
-      <div class="org-rail" aria-hidden="true"></div>` : ""}
+        <div class="org-root">
+          <p class="tag">${escapeHtml(root.status || "CORE")}</p>
+          <h4>${escapeHtml(pick(root.title))}</h4>
+          ${renderOptionalParagraph("org-lead", pick(root.lead))}
+          ${renderOptionalParagraph("org-copy", pick(root.scope))}
+        </div>
+        <div class="org-rail" aria-hidden="true"></div>
+      ` : ""}
       <div class="org-grid">
         ${departments
-      .map(
-        (department) => `
+          .map(
+            (department) => `
               <article class="org-node">
                 <div class="org-link-label">${escapeHtml(language.common.connect)}</div>
-                <p class="tag">${escapeHtml(department.status)}</p>
+                <p class="tag">${escapeHtml(department.status || "ACTIVE")}</p>
                 <h4>${escapeHtml(pick(department.title))}</h4>
-                <p class="org-lead">${escapeHtml(pick(department.lead))}</p>
-                <p class="org-copy">${escapeHtml(pick(department.scope))}</p>
+                ${renderOptionalParagraph("org-lead", pick(department.lead))}
+                ${renderOptionalParagraph("org-copy", pick(department.scope))}
               </article>
             `
-      )
-      .join("")}
+          )
+          .join("")}
       </div>
     </article>
   `;
 }
 
 function renderActivities(items) {
-  const published = (Array.isArray(items) ? items : []).filter((item) => item.published);
+  if (!dom.activitiesList) {
+    return;
+  }
+
+  const published = toArray(items).filter((item) => item.published);
   if (!published.length) {
     dom.activitiesList.innerHTML = emptyState();
     return;
@@ -337,7 +571,7 @@ function renderActivities(items) {
           <div class="timeline-meta">
             <span>${escapeHtml(formatDate(item.date))}</span>
             <span>${escapeHtml(pick(item.location))}</span>
-            <span>${escapeHtml(item.status)}</span>
+            <span>${escapeHtml(item.status || "")}</span>
           </div>
           <h4 class="timeline-title">${escapeHtml(pick(item.title))}</h4>
           <p class="timeline-copy">${escapeHtml(pick(item.summary))}</p>
@@ -348,13 +582,17 @@ function renderActivities(items) {
 }
 
 function renderFinance(finance, language) {
+  if (!dom.financeContainer) {
+    return;
+  }
+
   if (!finance) {
     dom.financeContainer.innerHTML = emptyState();
     return;
   }
 
-  const categories = Array.isArray(finance?.categories) ? finance.categories : [];
-  const totals = finance?.totals || {};
+  const categories = toArray(finance.categories);
+  const totals = finance.totals || {};
 
   if (!finance.published) {
     dom.financeContainer.innerHTML = `
@@ -407,16 +645,16 @@ function renderFinance(finance, language) {
         </thead>
         <tbody>
           ${categories
-      .map(
-        (item) => `
+            .map(
+              (item) => `
                 <tr>
                   <td>${escapeHtml(pick(item.label))}</td>
                   <td>${escapeHtml(formatCurrency(item.amount))}</td>
                   <td>${escapeHtml(pick(item.note))}</td>
                 </tr>
               `
-      )
-      .join("")}
+            )
+            .join("")}
         </tbody>
       </table>
       <p class="finance-disclaimer">
@@ -427,7 +665,11 @@ function renderFinance(finance, language) {
 }
 
 function renderInitiatives(items) {
-  const safeItems = Array.isArray(items) ? items : [];
+  if (!dom.initiativesGrid) {
+    return;
+  }
+
+  const safeItems = toArray(items);
   if (!safeItems.length) {
     dom.initiativesGrid.innerHTML = emptyState();
     return;
@@ -437,7 +679,7 @@ function renderInitiatives(items) {
     .map(
       (item) => `
         <article class="proposal-card">
-          <p class="tag">${escapeHtml(item.stage)}</p>
+          <p class="tag">${escapeHtml(item.stage || "QUEUE")}</p>
           <h4>${escapeHtml(pick(item.title))}</h4>
           <div class="proposal-meta">
             <span>${escapeHtml(pick(item.owner))}</span>
@@ -450,7 +692,11 @@ function renderInitiatives(items) {
 }
 
 function renderPublications(items) {
-  const safeItems = Array.isArray(items) ? items : [];
+  if (!dom.publicationsGrid) {
+    return;
+  }
+
+  const safeItems = toArray(items);
   if (!safeItems.length) {
     dom.publicationsGrid.innerHTML = emptyState();
     return;
@@ -460,7 +706,7 @@ function renderPublications(items) {
     .map(
       (item) => `
         <article class="publication-card">
-          <p class="tag">${escapeHtml(item.tag)}</p>
+          <p class="tag">${escapeHtml(item.tag || "UPDATE")}</p>
           <h4>${escapeHtml(pick(item.title))}</h4>
           <div class="publication-meta">
             <span>${escapeHtml(formatDate(item.date))}</span>
@@ -473,10 +719,14 @@ function renderPublications(items) {
 }
 
 function renderFooter(content, meta, language) {
+  if (!dom.siteFooter) {
+    return;
+  }
+
   const statement = pick(content.footer?.statement);
   const updated = meta?.updatedAt ? formatDate(meta.updatedAt, true) : "N/A";
   const badges = [];
-  const links = (Array.isArray(content.footer?.socialLinks) ? content.footer.socialLinks : []).filter((item) => item.url);
+  const links = toArray(content.footer?.socialLinks).filter((item) => item.url);
   const email = content.footer?.presidentEmail || "";
 
   if (content.settings?.aiReady) {
@@ -498,15 +748,15 @@ function renderFooter(content, meta, language) {
         <p>${escapeHtml(language.common.updatedAt)}: ${escapeHtml(updated)}</p>
         <div class="footer-socials" ${links.length ? "" : "hidden"}>
           ${links
-      .map(
-        (link) => `
+            .map(
+              (link) => `
                 <a class="social-link" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer">
                   <span class="social-icon" aria-hidden="true">${escapeHtml(resolveSocialIcon(link.icon))}</span>
                   <span>${escapeHtml(pick(link.label))}</span>
                 </a>
               `
-      )
-      .join("")}
+            )
+            .join("")}
         </div>
         <div class="footer-badges" ${badges.length ? "" : "hidden"}>
           ${badges.map((badge) => `<p class="tag">${escapeHtml(badge)}</p>`).join("")}
@@ -518,6 +768,87 @@ function renderFooter(content, meta, language) {
 
 function resolveSocialIcon(icon) {
   return socialIcons[icon] || socialIcons.default;
+}
+
+function setupAppModeActions() {
+  if (!dom.appModeHub) {
+    return;
+  }
+
+  dom.appModeHub.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target.closest("[data-app-action]") : null;
+    if (!target) {
+      return;
+    }
+
+    const action = target.dataset.appAction;
+    if (action === "share") {
+      event.preventDefault();
+      sharePortal();
+    }
+
+    if (action === "camera") {
+      event.preventDefault();
+      openNativeCamera();
+    }
+  });
+}
+
+function sharePortal() {
+  const url = "https://schoolent.cn/?app=1";
+  const title = pick(state.content?.site?.name) || pick(state.content?.hero?.title) || "Schoolent Portal";
+  const text = pick(state.content?.hero?.subtitle) || pick(state.content?.site?.tagline) || title;
+
+  if (hasNativeBridge() && typeof window.Android.share === "function") {
+    window.Android.share(text, url);
+    return;
+  }
+
+  if (navigator.share) {
+    navigator.share({ title, text, url }).catch(() => {});
+    return;
+  }
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).catch(() => {});
+  }
+}
+
+function openNativeCamera() {
+  if (hasNativeBridge() && typeof window.Android.openCamera === "function") {
+    window.Android.openCamera();
+  }
+}
+
+function hasNativeBridge() {
+  return typeof window !== "undefined" && typeof window.Android !== "undefined";
+}
+
+function readAppVersion() {
+  if (!hasNativeBridge() || typeof window.Android.getAppVersion !== "function") {
+    return "";
+  }
+
+  try {
+    return String(window.Android.getAppVersion() || "").trim();
+  } catch (error) {
+    console.warn("Failed to read Android app version", error);
+    return "";
+  }
+}
+
+function detectPreferredLanguage() {
+  const preferred = typeof navigator !== "undefined" ? navigator.language || navigator.languages?.[0] || "" : "";
+  return preferred.toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+function detectAppShell() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return params.get("app") === "1" || params.get("mode") === "app" || hasNativeBridge();
 }
 
 function setText(node, value) {
@@ -543,7 +874,6 @@ function renderOptionalParagraph(className, value) {
   return text ? `<p class="${className}">${escapeHtml(text)}</p>` : "";
 }
 
-
 function emptyState() {
   const template = document.querySelector("#emptyStateTemplate");
   return template ? template.innerHTML : `<div class="empty-state">${escapeHtml(ui[state.lang].common.noItems)}</div>`;
@@ -559,6 +889,10 @@ function pick(value) {
   }
 
   return state.lang === "zh" ? value.zh || value.en || "" : value.en || value.zh || "";
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
 function formatCurrency(amount) {
@@ -577,7 +911,8 @@ function formatDate(value, includeTime = false) {
   }
 
   const locale = state.lang === "zh" ? "zh-CN" : "en-US";
-  return new Intl.DateTimeFormat(locale, includeTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" }).format(date);
+  const options = includeTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" };
+  return new Intl.DateTimeFormat(locale, options).format(date);
 }
 
 function escapeHtml(value) {
