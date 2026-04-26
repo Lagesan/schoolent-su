@@ -63,8 +63,7 @@ const ui = {
       openProposals: "提案页面",
       contactPresident: "联系会长",
       sharePortal: "分享门户",
-      openCamera: "现场上传",
-      noBridge: "当前是在浏览器中预览 App 模式，原生分享和相机能力会在安卓容器里启用。",
+      noBridge: "当前是在浏览器中预览 App 模式，原生能力会在安卓容器里启用。",
       nextActivity: "下一项活动",
       latestProposal: "最近提案",
       noticeCount: "有效通知",
@@ -128,8 +127,7 @@ const ui = {
       openProposals: "Proposal Page",
       contactPresident: "Contact President",
       sharePortal: "Share Portal",
-      openCamera: "Upload On Site",
-      noBridge: "You are previewing app mode in a browser. Native share and camera actions will be available inside the Android container.",
+      noBridge: "You are previewing app mode in a browser. Native capabilities will be available inside the Android container.",
       nextActivity: "Next Activity",
       latestProposal: "Latest Proposal",
       noticeCount: "Active Notices",
@@ -364,12 +362,6 @@ function renderAppModeHub(content, language, meta) {
       type: "button",
       action: "share",
       label: language.app.sharePortal
-    },
-    {
-      type: "button",
-      action: "camera",
-      label: language.app.openCamera,
-      disabled: !hasBridge
     }
   ];
 
@@ -786,11 +778,6 @@ function setupAppModeActions() {
       event.preventDefault();
       sharePortal();
     }
-
-    if (action === "camera") {
-      event.preventDefault();
-      openNativeCamera();
-    }
   });
 }
 
@@ -811,12 +798,6 @@ function sharePortal() {
 
   if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(url).catch(() => {});
-  }
-}
-
-function openNativeCamera() {
-  if (hasNativeBridge() && typeof window.Android.openCamera === "function") {
-    window.Android.openCamera();
   }
 }
 
