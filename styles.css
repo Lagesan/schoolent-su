@@ -872,10 +872,12 @@ body.is-app-shell .topbar {
   position: sticky;
   top: 0;
   z-index: 20;
-  padding: 18px 16px;
-  margin-bottom: 18px;
-  background: rgba(0, 0, 0, 0.92);
-  backdrop-filter: blur(12px);
+  padding: 14px 16px 12px;
+  margin-bottom: 10px;
+  background: #000;
+  backdrop-filter: none;
+  align-items: center;
+  gap: 12px;
 }
 
 body.is-app-shell .topnav,
@@ -886,6 +888,45 @@ body.is-app-shell .ghost-link {
 body.is-app-shell .topbar-actions {
   width: auto;
   margin-left: auto;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+body.is-app-shell .brand {
+  gap: 12px;
+  align-items: center;
+}
+
+body.is-app-shell .brand-mark {
+  width: 44px;
+  height: 44px;
+}
+
+body.is-app-shell .brand-kicker {
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+}
+
+body.is-app-shell .brand h1 {
+  font-size: 1rem;
+  line-height: 1.05;
+  margin-top: 2px;
+}
+
+body.is-app-shell .lang-switch {
+  border: 1px solid var(--line);
+}
+
+body.is-app-shell .lang-pill {
+  min-width: 52px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  border: none;
+}
+
+body.is-app-shell .lang-pill + .lang-pill {
+  border-left: 1px solid var(--line);
 }
 
 body.is-app-shell main {
@@ -894,8 +935,8 @@ body.is-app-shell main {
 
 body.is-app-shell .hero-grid {
   grid-template-columns: 1fr;
-  gap: 16px;
-  padding-bottom: 24px;
+  gap: 12px;
+  padding-bottom: 18px;
 }
 
 body.is-app-shell .hero-copy,
@@ -910,12 +951,12 @@ body.is-app-shell .org-map {
 
 body.is-app-shell .hero-title {
   font-size: clamp(2rem, 9vw, 3.4rem);
-  margin: 14px 0 16px;
+  margin: 10px 0 12px;
   max-width: none;
 }
 
 body.is-app-shell .hero-actions {
-  margin-top: 24px;
+  margin-top: 18px;
 }
 
 body.is-app-shell .hero-actions .button {
@@ -923,11 +964,11 @@ body.is-app-shell .hero-actions .button {
 }
 
 body.is-app-shell .content-section {
-  padding: 24px 0;
+  padding: 20px 0;
 }
 
 body.is-app-shell .section-header {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 body.is-app-shell .proposal-grid,
@@ -950,6 +991,54 @@ body.is-app-shell .stream-card {
   padding: 22px 18px;
 }
 
+body.is-app-shell .app-mode-hub {
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+body.is-app-shell .app-surface {
+  padding: 18px;
+}
+
+body.is-app-shell .app-surface-head {
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+body.is-app-shell .app-surface-head h3,
+body.is-app-shell .app-spotlight-title {
+  font-size: 1.15rem;
+}
+
+body.is-app-shell .app-inline-meta {
+  gap: 8px;
+  margin-top: 14px;
+}
+
+body.is-app-shell .app-summary-grid,
+body.is-app-shell .app-action-grid {
+  gap: 10px;
+}
+
+body.is-app-shell .app-summary-card {
+  padding: 14px;
+}
+
+body.is-app-shell .app-summary-card strong {
+  font-size: 1.3rem;
+}
+
+body.is-app-shell .app-action-chip {
+  min-height: 48px;
+  padding: 12px 14px;
+  font-size: 0.76rem;
+}
+
+body.is-app-shell .tag {
+  padding: 5px 10px;
+  font-size: 0.64rem;
+}
+
 @media (max-width: 640px) {
   .app-summary-grid,
   .app-action-grid {
@@ -957,11 +1046,31 @@ body.is-app-shell .stream-card {
   }
 
   body.is-app-shell .topbar {
-    padding-inline: 12px;
+    padding: 12px;
+    align-items: flex-start;
+    flex-direction: row;
   }
 
   body.is-app-shell main,
   body.is-app-shell .site-footer {
     padding-inline: 12px;
+  }
+
+  body.is-app-shell .topbar-actions {
+    margin-left: 0;
+  }
+
+  body.is-app-shell .lang-pill {
+    min-width: 44px;
+    padding: 8px 10px;
+  }
+
+  body.is-app-shell .brand {
+    flex: 1;
+    min-width: 0;
+  }
+
+  body.is-app-shell .brand h1 {
+    font-size: 0.9rem;
   }
 }
