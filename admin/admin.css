@@ -57,8 +57,8 @@
 .editor-card {
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.025);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
 }
 
 .editor-section h3,
@@ -88,9 +88,9 @@
 .field select {
   width: 100%;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--panel);
   color: var(--text);
 }
 
@@ -177,9 +177,9 @@
 
 .preview-node {
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius);
   padding: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--panel);
 }
 
 .preview-node strong {
@@ -192,7 +192,7 @@
   align-items: center;
   gap: 8px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius);
   padding: 8px 12px;
 }
 

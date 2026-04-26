@@ -238,17 +238,18 @@ function renderMetrics(content, language) {
   const activityItems = Array.isArray(content.activities?.items) ? content.activities.items : [];
   const departmentItems = Array.isArray(content.organization?.departments) ? content.organization.departments : [];
   const hasLeadership = Boolean(pick(content.organization?.leadership?.title) || pick(content.organization?.leadership?.lead));
+  const aiReady = Boolean(content.settings?.aiReady);
   const publishedActivities = activityItems.filter((item) => item.published).length;
   const metrics = [
     { label: language.metrics.teams, value: departmentItems.length + (hasLeadership ? 1 : 0) },
     { label: language.metrics.activities, value: publishedActivities },
     {
       label: language.metrics.finance,
-      value: content.finance.published ? language.finance.published : language.finance.hidden
+      value: content.finance?.published ? language.finance.published : language.finance.hidden
     },
     {
       label: language.metrics.ai,
-      value: content.settings.aiReady ? "READY" : "PENDING"
+      value: aiReady ? "READY" : "PENDING"
     }
   ];
 
@@ -347,6 +348,11 @@ function renderActivities(items) {
 }
 
 function renderFinance(finance, language) {
+  if (!finance) {
+    dom.financeContainer.innerHTML = emptyState();
+    return;
+  }
+
   const categories = Array.isArray(finance?.categories) ? finance.categories : [];
   const totals = finance?.totals || {};
 
@@ -473,7 +479,7 @@ function renderFooter(content, meta, language) {
   const links = (Array.isArray(content.footer?.socialLinks) ? content.footer.socialLinks : []).filter((item) => item.url);
   const email = content.footer?.presidentEmail || "";
 
-  if (content.settings.aiReady) {
+  if (content.settings?.aiReady) {
     badges.push(language.common.aiReady);
   }
 
