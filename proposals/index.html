@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Proposals</title>
+  <link rel="icon" type="image/png" href="/assets/schoolent-icon.png" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body data-page-type="proposals">
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Back to portal home">
+        <img class="brand-mark" src="/assets/Kunzhong.jpeg" alt="Kunzhong logo" />
+        <div>
+          <p class="brand-kicker">STUDENT COUNCIL</p>
+          <h1 id="brandName">Transparency Portal</h1>
+        </div>
+      </a>
+      <div class="topbar-actions">
+        <div class="lang-switch" role="group" aria-label="Language switcher">
+          <button class="lang-pill is-active" type="button" data-lang-trigger="zh">中文</button>
+          <button class="lang-pill" type="button" data-lang-trigger="en">EN</button>
+        </div>
+        <a class="ghost-link" href="/">Home</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="detail-hero">
+        <p class="section-label" id="pageBadge">PROPOSALS / TRACKER</p>
+        <h2 class="hero-title detail-title" id="pageTitle">Loading...</h2>
+        <p class="hero-subtitle detail-subtitle" id="pageSubtitle"></p>
+        <p class="panel-label detail-meta" id="pageUpdatedAt"></p>
+      </section>
+
+      <section class="detail-stream" id="pageStream"></section>
+    </main>
+  </div>
+
+  <script type="module" src="/content-pages.js"></script>
+</body>
+
+</html>

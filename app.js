@@ -58,9 +58,9 @@ const ui = {
       quickActions: "快捷操作",
       overview: "一眼概览",
       spotlight: "最新焦点",
-      openActivities: "查看活动",
+      openActivities: "查看更新",
       openFinance: "财务摘要",
-      openProposals: "提案进度",
+      openProposals: "提案页面",
       contactPresident: "联系会长",
       sharePortal: "分享门户",
       openCamera: "现场上传",
@@ -123,9 +123,9 @@ const ui = {
       quickActions: "Quick Actions",
       overview: "Overview",
       spotlight: "Spotlight",
-      openActivities: "Open Activity",
+      openActivities: "Open Updates",
       openFinance: "Finance Snapshot",
-      openProposals: "Proposal Status",
+      openProposals: "Proposal Page",
       contactPresident: "Contact President",
       sharePortal: "Share Portal",
       openCamera: "Upload On Site",
@@ -341,7 +341,7 @@ function renderAppModeHub(content, language, meta) {
   const actionItems = [
     {
       type: "link",
-      href: "#activities",
+      href: state.isAppShell ? "/updates/?app=1" : "/updates/",
       label: language.app.openActivities
     },
     {
@@ -351,7 +351,7 @@ function renderAppModeHub(content, language, meta) {
     },
     {
       type: "link",
-      href: "#initiatives",
+      href: state.isAppShell ? "/proposals/?app=1" : "/proposals/",
       label: language.app.openProposals
     },
     {
