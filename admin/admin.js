@@ -32,6 +32,14 @@ const factories = {
     scope: { zh: "", en: "" },
     status: "ACTIVE"
   }),
+  "organization.concurrentRoles": () => ({
+    person: { zh: "", en: "" },
+    primaryRole: { zh: "", en: "" },
+    concurrentRole: { zh: "", en: "" },
+    period: { zh: "", en: "" },
+    status: "ACTIVE",
+    note: { zh: "", en: "" }
+  }),
   "activities.items": () => ({
     title: { zh: "", en: "" },
     date: new Date().toISOString(),
@@ -138,6 +146,7 @@ function renderEditor() {
   dom.editorPanel.hidden = false;
 
   const leadership = state.content.organization.leadership;
+  const concurrentRoles = state.content.organization.concurrentRoles || [];
   const departments = state.content.organization.departments;
 
   dom.editorPanel.innerHTML = `
@@ -218,6 +227,39 @@ function renderEditor() {
             ${localizedFields("负责人", "organization.leadership.lead", leadership.lead)}
             ${localizedFields("负责范围", "organization.leadership.scope", leadership.scope, true)}
             ${inputField("状态标签", "organization.leadership.status", leadership.status)}
+          </div>
+        </div>
+
+        <div class="editor-card">
+          <h4>兼任与临时安排</h4>
+          <p class="help-copy">适合记录“本月由谁兼任哪个部门负责人”这类变化。后面规则再变，也可以继续往这里加。</p>
+          <div class="stack-list">
+            ${concurrentRoles
+              .map((item, index) =>
+                listItem({
+                  title: `${pickLocal(item.person) || "未命名"} / ${pickLocal(item.concurrentRole) || "未填写兼任职务"}`,
+                  meta: `${pickLocal(item.period) || "未填写周期"} / ${item.status}`,
+                  body: `
+                    <div class="list-body">
+                      <div class="editor-grid">
+                        ${localizedFields("人员姓名", `organization.concurrentRoles[${index}].person`, item.person)}
+                        ${localizedFields("原本职务", `organization.concurrentRoles[${index}].primaryRole`, item.primaryRole)}
+                        ${localizedFields("兼任职务", `organization.concurrentRoles[${index}].concurrentRole`, item.concurrentRole)}
+                        ${localizedFields("适用周期", `organization.concurrentRoles[${index}].period`, item.period)}
+                        ${inputField("状态标签", `organization.concurrentRoles[${index}].status`, item.status)}
+                        ${localizedFields("补充说明", `organization.concurrentRoles[${index}].note`, item.note, true)}
+                      </div>
+                      <div class="row-actions">
+                        <button class="button button-danger" type="button" data-action="remove" data-array-path="organization.concurrentRoles" data-index="${index}">删除这条安排</button>
+                      </div>
+                    </div>
+                  `
+                })
+              )
+              .join("")}
+          </div>
+          <div class="row-actions">
+            <button class="button button-secondary" type="button" data-action="add" data-array-path="organization.concurrentRoles">新增兼任安排</button>
           </div>
         </div>
 

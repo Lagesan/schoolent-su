@@ -73,6 +73,17 @@ function leadershipTemplate() {
   };
 }
 
+function concurrentRoleTemplate() {
+  return {
+    person: localized("", ""),
+    primaryRole: localized("", ""),
+    concurrentRole: localized("", ""),
+    period: localized("", ""),
+    status: "ACTIVE",
+    note: localized("", "")
+  };
+}
+
 export function createDefaultContent() {
   return {
     site: {
@@ -103,6 +114,7 @@ export function createDefaultContent() {
       heading: localized("学生会组织关系图", "Student council relationship map"),
       intro: localized("", ""),
       leadership: leadershipTemplate(),
+      concurrentRoles: [],
       departments: []
     },
     activities: {
@@ -206,6 +218,17 @@ function normalizeActivity(value, fallback) {
   };
 }
 
+function normalizeConcurrentRole(value, fallback) {
+  return {
+    person: normalizeLocalized(value?.person, fallback.person),
+    primaryRole: normalizeLocalized(value?.primaryRole, fallback.primaryRole),
+    concurrentRole: normalizeLocalized(value?.concurrentRole, fallback.concurrentRole),
+    period: normalizeLocalized(value?.period, fallback.period),
+    status: normalizeString(value?.status, fallback.status),
+    note: normalizeLocalized(value?.note, fallback.note)
+  };
+}
+
 function normalizeFinanceCategory(value, fallback) {
   return {
     label: normalizeLocalized(value?.label, fallback.label),
@@ -273,6 +296,9 @@ export function normalizeContent(value = {}) {
         value.organization?.leadership || legacyTeams[0],
         fallback.organization.leadership
       ),
+      concurrentRoles: Array.isArray(value.organization?.concurrentRoles)
+        ? value.organization.concurrentRoles.map((item) => normalizeConcurrentRole(item, concurrentRoleTemplate()))
+        : fallback.organization.concurrentRoles.map((item) => normalizeConcurrentRole(item, concurrentRoleTemplate())),
       departments: Array.isArray(departmentSeed)
         ? departmentSeed.map((item) => normalizeDepartment(item, departmentTemplate()))
         : fallback.organization.departments.map((item) => normalizeDepartment(item, departmentTemplate()))

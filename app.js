@@ -21,6 +21,11 @@ const ui = {
       initiatives: "提案追踪",
       publications: "公开纪要"
     },
+    organization: {
+      assignmentTitle: "兼任与临时安排",
+      assignmentLabel: "兼任",
+      assignmentPeriod: "适用周期"
+    },
     metrics: {
       teams: "部门节点",
       activities: "已发布活动",
@@ -84,6 +89,11 @@ const ui = {
       finance: "Transparency Data",
       initiatives: "Proposal Tracker",
       publications: "Public Notes"
+    },
+    organization: {
+      assignmentTitle: "Concurrent and Temporary Roles",
+      assignmentLabel: "Concurrent Role",
+      assignmentPeriod: "Effective Period"
     },
     metrics: {
       teams: "Department Nodes",
@@ -507,10 +517,11 @@ function renderOrganization(organization, language) {
   }
 
   const root = organization?.leadership || {};
+  const concurrentRoles = toArray(organization?.concurrentRoles);
   const departments = toArray(organization?.departments);
   const hasRootContent = Boolean(pick(root.title) || pick(root.lead) || pick(root.scope));
 
-  if (!hasRootContent && !departments.length) {
+  if (!hasRootContent && !concurrentRoles.length && !departments.length) {
     dom.organizationChart.innerHTML = emptyState();
     return;
   }
@@ -525,6 +536,29 @@ function renderOrganization(organization, language) {
           ${renderOptionalParagraph("org-copy", pick(root.scope))}
         </div>
         <div class="org-rail" aria-hidden="true"></div>
+      ` : ""}
+      ${concurrentRoles.length ? `
+        <section class="org-assignment-panel">
+          <p class="section-label">${escapeHtml(language.organization.assignmentTitle.toUpperCase())}</p>
+          <div class="org-assignment-list">
+            ${concurrentRoles
+              .map(
+                (item) => `
+                  <article class="org-assignment-card">
+                    <div class="timeline-meta">
+                      <span>${escapeHtml(language.organization.assignmentLabel)}</span>
+                      <span>${escapeHtml(item.status || "ACTIVE")}</span>
+                      <span>${escapeHtml(pick(item.period) || language.organization.assignmentPeriod)}</span>
+                    </div>
+                    <h4>${escapeHtml(pick(item.person))}</h4>
+                    ${renderOptionalParagraph("org-lead", [pick(item.primaryRole), pick(item.concurrentRole)].filter(Boolean).join(" -> "))}
+                    ${renderOptionalParagraph("org-copy", pick(item.note))}
+                  </article>
+                `
+              )
+              .join("")}
+          </div>
+        </section>
       ` : ""}
       <div class="org-grid">
         ${departments

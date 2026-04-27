@@ -581,6 +581,22 @@ select {
   background: var(--line-strong);
 }
 
+.org-assignment-panel {
+  margin: 0 0 28px;
+}
+
+.org-assignment-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.org-assignment-card {
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+}
+
 .org-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -976,6 +992,14 @@ body.is-app-shell .publication-grid,
 body.is-app-shell .finance-number-grid,
 body.is-app-shell .org-grid {
   grid-template-columns: 1fr;
+}
+
+body.is-app-shell .org-assignment-panel {
+  margin-bottom: 20px;
+}
+
+body.is-app-shell .org-assignment-card {
+  padding: 18px;
 }
 
 body.is-app-shell .site-footer {
