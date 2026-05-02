@@ -40,6 +40,13 @@ const factories = {
     status: "ACTIVE",
     note: { zh: "", en: "" }
   }),
+  "organization.presidentRotation.members": () => ({
+    person: { zh: "", en: "" },
+    baseRole: { zh: "", en: "" },
+    order: 1,
+    status: "UPCOMING",
+    note: { zh: "", en: "" }
+  }),
   "activities.items": () => ({
     title: { zh: "", en: "" },
     date: new Date().toISOString(),
@@ -146,6 +153,14 @@ function renderEditor() {
   dom.editorPanel.hidden = false;
 
   const leadership = state.content.organization.leadership;
+  const presidentRotation = state.content.organization.presidentRotation || {
+    heading: { zh: "", en: "" },
+    currentPeriod: { zh: "", en: "" },
+    currentPresident: { zh: "", en: "" },
+    note: { zh: "", en: "" },
+    members: []
+  };
+  const rotationMembers = presidentRotation.members || [];
   const concurrentRoles = state.content.organization.concurrentRoles || [];
   const departments = state.content.organization.departments;
 
@@ -231,8 +246,46 @@ function renderEditor() {
         </div>
 
         <div class="editor-card">
+          <h4>会长轮换顺序</h4>
+          <p class="help-copy">固定岗位继续在部门节点里维护；这里专门展示“会长由谁按顺序轮换”。你可以标记当前轮值人，也可以提前排好顺序。</p>
+          <div class="editor-grid">
+            ${localizedFields("轮换区标题", "organization.presidentRotation.heading", presidentRotation.heading)}
+            ${localizedFields("当前轮值周期", "organization.presidentRotation.currentPeriod", presidentRotation.currentPeriod)}
+            ${localizedFields("当前轮值会长", "organization.presidentRotation.currentPresident", presidentRotation.currentPresident)}
+            ${localizedFields("轮换说明", "organization.presidentRotation.note", presidentRotation.note, true)}
+          </div>
+          <div class="stack-list">
+            ${rotationMembers
+              .map((item, index) =>
+                listItem({
+                  title: `${pickLocal(item.person) || "未命名"} / #${Number(item.order || 0)}`,
+                  meta: `${item.status} / ${pickLocal(item.baseRole) || "未填写固定岗位"}`,
+                  body: `
+                    <div class="list-body">
+                      <div class="editor-grid">
+                        ${localizedFields("人员姓名", `organization.presidentRotation.members[${index}].person`, item.person)}
+                        ${localizedFields("固定岗位", `organization.presidentRotation.members[${index}].baseRole`, item.baseRole)}
+                        ${numberField("轮换顺位", `organization.presidentRotation.members[${index}].order`, item.order)}
+                        ${inputField("状态标签", `organization.presidentRotation.members[${index}].status`, item.status)}
+                        ${localizedFields("补充说明", `organization.presidentRotation.members[${index}].note`, item.note, true)}
+                      </div>
+                      <div class="row-actions">
+                        <button class="button button-danger" type="button" data-action="remove" data-array-path="organization.presidentRotation.members" data-index="${index}">删除轮换成员</button>
+                      </div>
+                    </div>
+                  `
+                })
+              )
+              .join("")}
+          </div>
+          <div class="row-actions">
+            <button class="button button-secondary" type="button" data-action="add" data-array-path="organization.presidentRotation.members">新增轮换成员</button>
+          </div>
+        </div>
+
+        <div class="editor-card">
           <h4>兼任与临时安排</h4>
-          <p class="help-copy">适合记录“本月由谁兼任哪个部门负责人”这类变化。后面规则再变，也可以继续往这里加。</p>
+          <p class="help-copy">这是旧规则的兼容区。若仍有“某人短期兼任某部长”之类安排，继续放这里；如果主要是会长轮换，请优先维护上面的轮换顺序。</p>
           <div class="stack-list">
             ${concurrentRoles
               .map((item, index) =>

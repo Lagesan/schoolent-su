@@ -581,6 +581,43 @@ select {
   background: var(--line-strong);
 }
 
+.org-rotation-panel {
+  margin: 0 0 28px;
+}
+
+.org-subheader {
+  margin-bottom: 18px;
+}
+
+.org-subheader h4 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.org-rotation-head {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.org-rotation-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.org-rotation-card {
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+}
+
+.org-rotation-card.is-current {
+  border-color: var(--text);
+}
+
 .org-assignment-panel {
   margin: 0 0 28px;
 }
@@ -814,7 +851,8 @@ select {
   .proposal-grid,
   .publication-grid,
   .finance-number-grid,
-  .org-grid {
+  .org-grid,
+  .org-rotation-list {
     grid-template-columns: 1fr;
   }
 
@@ -990,14 +1028,17 @@ body.is-app-shell .section-header {
 body.is-app-shell .proposal-grid,
 body.is-app-shell .publication-grid,
 body.is-app-shell .finance-number-grid,
-body.is-app-shell .org-grid {
+body.is-app-shell .org-grid,
+body.is-app-shell .org-rotation-list {
   grid-template-columns: 1fr;
 }
 
+body.is-app-shell .org-rotation-panel,
 body.is-app-shell .org-assignment-panel {
   margin-bottom: 20px;
 }
 
+body.is-app-shell .org-rotation-card,
 body.is-app-shell .org-assignment-card {
   padding: 18px;
 }

@@ -84,6 +84,26 @@ function concurrentRoleTemplate() {
   };
 }
 
+function presidentRotationMemberTemplate() {
+  return {
+    person: localized("", ""),
+    baseRole: localized("", ""),
+    order: 1,
+    status: "UPCOMING",
+    note: localized("", "")
+  };
+}
+
+function presidentRotationTemplate() {
+  return {
+    heading: localized("会长轮换顺序", "President rotation order"),
+    currentPeriod: localized("", ""),
+    currentPresident: localized("", ""),
+    note: localized("", ""),
+    members: []
+  };
+}
+
 export function createDefaultContent() {
   return {
     site: {
@@ -114,6 +134,7 @@ export function createDefaultContent() {
       heading: localized("学生会组织关系图", "Student council relationship map"),
       intro: localized("", ""),
       leadership: leadershipTemplate(),
+      presidentRotation: presidentRotationTemplate(),
       concurrentRoles: [],
       departments: []
     },
@@ -229,6 +250,28 @@ function normalizeConcurrentRole(value, fallback) {
   };
 }
 
+function normalizePresidentRotationMember(value, fallback) {
+  return {
+    person: normalizeLocalized(value?.person, fallback.person),
+    baseRole: normalizeLocalized(value?.baseRole, fallback.baseRole),
+    order: normalizeNumber(value?.order, fallback.order),
+    status: normalizeString(value?.status, fallback.status),
+    note: normalizeLocalized(value?.note, fallback.note)
+  };
+}
+
+function normalizePresidentRotation(value, fallback) {
+  return {
+    heading: normalizeLocalized(value?.heading, fallback.heading),
+    currentPeriod: normalizeLocalized(value?.currentPeriod, fallback.currentPeriod),
+    currentPresident: normalizeLocalized(value?.currentPresident, fallback.currentPresident),
+    note: normalizeLocalized(value?.note, fallback.note),
+    members: Array.isArray(value?.members)
+      ? value.members.map((item) => normalizePresidentRotationMember(item, presidentRotationMemberTemplate()))
+      : fallback.members.map((item) => normalizePresidentRotationMember(item, presidentRotationMemberTemplate()))
+  };
+}
+
 function normalizeFinanceCategory(value, fallback) {
   return {
     label: normalizeLocalized(value?.label, fallback.label),
@@ -295,6 +338,10 @@ export function normalizeContent(value = {}) {
       leadership: normalizeDepartment(
         value.organization?.leadership || legacyTeams[0],
         fallback.organization.leadership
+      ),
+      presidentRotation: normalizePresidentRotation(
+        value.organization?.presidentRotation,
+        fallback.organization.presidentRotation
       ),
       concurrentRoles: Array.isArray(value.organization?.concurrentRoles)
         ? value.organization.concurrentRoles.map((item) => normalizeConcurrentRole(item, concurrentRoleTemplate()))

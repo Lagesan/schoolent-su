@@ -22,6 +22,9 @@ const ui = {
       publications: "公开纪要"
     },
     organization: {
+      rotationTitle: "会长轮换顺序",
+      rotationCurrent: "当前轮值",
+      rotationOrder: "轮换顺位",
       assignmentTitle: "兼任与临时安排",
       assignmentLabel: "兼任",
       assignmentPeriod: "适用周期"
@@ -91,6 +94,9 @@ const ui = {
       publications: "Public Notes"
     },
     organization: {
+      rotationTitle: "President Rotation",
+      rotationCurrent: "Current Rotation",
+      rotationOrder: "Rotation Order",
       assignmentTitle: "Concurrent and Temporary Roles",
       assignmentLabel: "Concurrent Role",
       assignmentPeriod: "Effective Period"
@@ -517,11 +523,20 @@ function renderOrganization(organization, language) {
   }
 
   const root = organization?.leadership || {};
+  const presidentRotation = organization?.presidentRotation || {};
+  const rotationMembers = toArray(presidentRotation.members).slice().sort((left, right) => Number(left.order || 0) - Number(right.order || 0));
   const concurrentRoles = toArray(organization?.concurrentRoles);
   const departments = toArray(organization?.departments);
   const hasRootContent = Boolean(pick(root.title) || pick(root.lead) || pick(root.scope));
+  const hasRotationContent = Boolean(
+    pick(presidentRotation.heading) ||
+    pick(presidentRotation.currentPresident) ||
+    pick(presidentRotation.currentPeriod) ||
+    pick(presidentRotation.note) ||
+    rotationMembers.length
+  );
 
-  if (!hasRootContent && !concurrentRoles.length && !departments.length) {
+  if (!hasRootContent && !hasRotationContent && !concurrentRoles.length && !departments.length) {
     dom.organizationChart.innerHTML = emptyState();
     return;
   }
@@ -536,6 +551,38 @@ function renderOrganization(organization, language) {
           ${renderOptionalParagraph("org-copy", pick(root.scope))}
         </div>
         <div class="org-rail" aria-hidden="true"></div>
+      ` : ""}
+      ${hasRotationContent ? `
+        <section class="org-rotation-panel">
+          <div class="section-header org-subheader">
+            <p class="section-label">${escapeHtml((pick(presidentRotation.heading) || language.organization.rotationTitle).toUpperCase())}</p>
+            <h4>${escapeHtml(pick(presidentRotation.currentPresident) || language.organization.rotationTitle)}</h4>
+          </div>
+          <div class="org-rotation-head">
+            ${pick(presidentRotation.currentPeriod) ? `<p class="tag">${escapeHtml(language.organization.rotationCurrent)}: ${escapeHtml(pick(presidentRotation.currentPeriod))}</p>` : ""}
+            ${pick(presidentRotation.note) ? `<p class="org-copy">${escapeHtml(pick(presidentRotation.note))}</p>` : ""}
+          </div>
+          <div class="org-rotation-list">
+            ${rotationMembers.length
+              ? rotationMembers
+                .map(
+                  (item) => `
+                    <article class="org-rotation-card${String(item.status || "").toUpperCase() === "CURRENT" ? " is-current" : ""}">
+                      <div class="timeline-meta">
+                        <span>${escapeHtml(language.organization.rotationOrder)} #${escapeHtml(String(item.order || ""))}</span>
+                        <span>${escapeHtml(item.status || "UPCOMING")}</span>
+                      </div>
+                      <h4>${escapeHtml(pick(item.person))}</h4>
+                      ${renderOptionalParagraph("org-lead", pick(item.baseRole))}
+                      ${renderOptionalParagraph("org-copy", pick(item.note))}
+                    </article>
+                  `
+                )
+                .join("")
+              : `<div class="empty-state"><p class="empty-title">${escapeHtml(language.common.noItems)}</p></div>`
+            }
+          </div>
+        </section>
       ` : ""}
       ${concurrentRoles.length ? `
         <section class="org-assignment-panel">
