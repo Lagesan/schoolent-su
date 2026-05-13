@@ -28,17 +28,19 @@ const factories = {
   }),
   "organization.departments": () => ({
     title: { zh: "", en: "" },
-    lead: { zh: "", en: "" },
     scope: { zh: "", en: "" },
     status: "ACTIVE"
   }),
-  "organization.concurrentRoles": () => ({
-    person: { zh: "", en: "" },
-    primaryRole: { zh: "", en: "" },
-    concurrentRole: { zh: "", en: "" },
-    period: { zh: "", en: "" },
+  "organization.people": () => ({
+    name: { zh: "", en: "" },
+    roles: [],
     status: "ACTIVE",
     note: { zh: "", en: "" }
+  }),
+  "person.roles": () => ({
+    title: { zh: "", en: "" },
+    scope: { zh: "", en: "" },
+    status: "ACTIVE"
   }),
   "organization.presidentRotation.members": () => ({
     person: { zh: "", en: "" },
@@ -169,8 +171,14 @@ function renderEditor() {
     note: { zh: "", en: "" },
     members: []
   };
+  const monthlyPresident = state.content.organization.monthlyPresident || {
+    person: { zh: "", en: "" },
+    period: { zh: "", en: "" },
+    note: { zh: "", en: "" }
+  };
   const rotationMembers = presidentRotation.members || [];
-  const concurrentRoles = state.content.organization.concurrentRoles || [];
+  const concurrentRoles = [];
+  const people = state.content.organization.people || [];
   const departments = state.content.organization.departments;
 
   dom.editorPanel.innerHTML = `
@@ -249,9 +257,65 @@ function renderEditor() {
           <h4>核心节点</h4>
           <div class="editor-grid">
             ${localizedFields("核心节点名称", "organization.leadership.title", leadership.title)}
-            ${localizedFields("负责人", "organization.leadership.lead", leadership.lead)}
             ${localizedFields("负责范围", "organization.leadership.scope", leadership.scope, true)}
             ${inputField("状态标签", "organization.leadership.status", leadership.status)}
+          </div>
+        </div>
+
+        <div class="editor-card">
+          <h4>当月轮值主席</h4>
+          <p class="help-copy">这里展示当前月份实际由谁轮值担任会长；后续月份变化时，只改这一块即可。</p>
+          <div class="editor-grid">
+            ${localizedFields("轮值主席姓名", "organization.monthlyPresident.person", monthlyPresident.person)}
+            ${localizedFields("轮值周期", "organization.monthlyPresident.period", monthlyPresident.period)}
+            ${localizedFields("补充说明", "organization.monthlyPresident.note", monthlyPresident.note, true)}
+          </div>
+        </div>
+
+        <div class="editor-card">
+          <h4>人员与职位</h4>
+          <p class="help-copy">以人为本：先添加人员，再给这个人分配一个或多个职位。固定岗位定义仍在下方维护。</p>
+          <div class="stack-list">
+            ${people
+              .map((person, personIndex) =>
+                listItem({
+                  title: pickLocal(person.name),
+                  meta: `${person.status} / ${person.roles?.length || 0} role(s)`,
+                  body: `
+                    <div class="list-body">
+                      <div class="editor-grid">
+                        ${localizedFields("人员姓名", `organization.people[${personIndex}].name`, person.name)}
+                        ${inputField("人员状态", `organization.people[${personIndex}].status`, person.status)}
+                        ${localizedFields("人员说明", `organization.people[${personIndex}].note`, person.note, true)}
+                      </div>
+                      <div class="stack-list">
+                        ${(person.roles || [])
+                          .map((role, roleIndex) => `
+                            <div class="editor-card">
+                              <div class="editor-grid">
+                                ${localizedFields("职位名称", `organization.people[${personIndex}].roles[${roleIndex}].title`, role.title)}
+                                ${localizedFields("职位范围", `organization.people[${personIndex}].roles[${roleIndex}].scope`, role.scope, true)}
+                                ${inputField("职位状态", `organization.people[${personIndex}].roles[${roleIndex}].status`, role.status)}
+                              </div>
+                              <div class="row-actions">
+                                <button class="button button-danger" type="button" data-action="remove-person-role" data-person-index="${personIndex}" data-role-index="${roleIndex}">删除这个职位</button>
+                              </div>
+                            </div>
+                          `)
+                          .join("")}
+                      </div>
+                      <div class="row-actions">
+                        <button class="button button-secondary" type="button" data-action="add-person-role" data-person-index="${personIndex}">给此人新增职位</button>
+                        <button class="button button-danger" type="button" data-action="remove" data-array-path="organization.people" data-index="${personIndex}">删除此人</button>
+                      </div>
+                    </div>
+                  `
+                })
+              )
+              .join("")}
+          </div>
+          <div class="row-actions">
+            <button class="button button-secondary" type="button" data-action="add" data-array-path="organization.people">新增人员</button>
           </div>
         </div>
 
@@ -331,14 +395,14 @@ function renderEditor() {
           <div class="preview-grid">
             <div class="preview-node">
               <strong>${escapeHtml(pickLocal(leadership.title))}</strong>
-              <span>${escapeHtml(pickLocal(leadership.lead))}</span>
+              <span>${escapeHtml(pickLocal(leadership.scope))}</span>
             </div>
             ${departments
               .map(
                 (department) => `
                   <div class="preview-node">
                     <strong>${escapeHtml(pickLocal(department.title))}</strong>
-                    <span>${escapeHtml(pickLocal(department.lead))}</span>
+                    <span>${escapeHtml(pickLocal(department.scope))}</span>
                   </div>
                 `
               )
@@ -356,7 +420,6 @@ function renderEditor() {
                   <div class="list-body">
                     <div class="editor-grid">
                       ${localizedFields("部门名称", `organization.departments[${index}].title`, department.title)}
-                      ${localizedFields("负责人", `organization.departments[${index}].lead`, department.lead)}
                       ${localizedFields("负责范围", `organization.departments[${index}].scope`, department.scope, true)}
                       ${inputField("状态标签", `organization.departments[${index}].status`, department.status)}
                     </div>
@@ -603,6 +666,10 @@ function renderEditor() {
       </section>
     </div>
   `;
+
+  dom.editorPanel
+    .querySelectorAll('[data-array-path="organization.concurrentRoles"]')
+    .forEach((node) => node.closest(".editor-card")?.remove());
 }
 
 async function handleLoginSubmit(event) {
@@ -678,6 +745,22 @@ async function handleEditorClick(event) {
     const index = Number(button.dataset.index);
     const array = getByPath(state.content, path);
     array.splice(index, 1);
+    renderEditor();
+    return;
+  }
+
+  if (action === "add-person-role") {
+    const personIndex = Number(button.dataset.personIndex);
+    state.content.organization.people[personIndex].roles ||= [];
+    state.content.organization.people[personIndex].roles.push(factories["person.roles"]());
+    renderEditor();
+    return;
+  }
+
+  if (action === "remove-person-role") {
+    const personIndex = Number(button.dataset.personIndex);
+    const roleIndex = Number(button.dataset.roleIndex);
+    state.content.organization.people[personIndex].roles.splice(roleIndex, 1);
     renderEditor();
     return;
   }

@@ -5,7 +5,6 @@ function localized(zh, en) {
 function departmentTemplate() {
   return {
     title: localized("", ""),
-    lead: localized("", ""),
     scope: localized("", ""),
     status: "ACTIVE"
   };
@@ -90,19 +89,32 @@ function socialLinkTemplate() {
 function leadershipTemplate() {
   return {
     title: localized("", ""),
-    lead: localized("", ""),
     scope: localized("", ""),
     status: "CORE"
   };
 }
 
-function concurrentRoleTemplate() {
+function personRoleTemplate() {
+  return {
+    title: localized("", ""),
+    scope: localized("", ""),
+    status: "ACTIVE"
+  };
+}
+
+function personTemplate() {
+  return {
+    name: localized("", ""),
+    roles: [],
+    status: "ACTIVE",
+    note: localized("", "")
+  };
+}
+
+function monthlyPresidentTemplate() {
   return {
     person: localized("", ""),
-    primaryRole: localized("", ""),
-    concurrentRole: localized("", ""),
     period: localized("", ""),
-    status: "ACTIVE",
     note: localized("", "")
   };
 }
@@ -157,8 +169,9 @@ export function createDefaultContent() {
       heading: localized("学生会组织关系图", "Student council relationship map"),
       intro: localized("", ""),
       leadership: leadershipTemplate(),
+      monthlyPresident: monthlyPresidentTemplate(),
       presidentRotation: presidentRotationTemplate(),
-      concurrentRoles: [],
+      people: [],
       departments: []
     },
     activities: {
@@ -250,7 +263,6 @@ function normalizeNotice(value, fallback) {
 function normalizeDepartment(value, fallback) {
   return {
     title: normalizeLocalized(value?.title, fallback.title),
-    lead: normalizeLocalized(value?.lead, fallback.lead),
     scope: normalizeLocalized(value?.scope, fallback.scope),
     status: normalizeString(value?.status, fallback.status)
   };
@@ -311,13 +323,29 @@ function normalizeUpdate(value, fallback) {
   };
 }
 
-function normalizeConcurrentRole(value, fallback) {
+function normalizePersonRole(value, fallback) {
+  return {
+    title: normalizeLocalized(value?.title, fallback.title),
+    scope: normalizeLocalized(value?.scope, fallback.scope),
+    status: normalizeString(value?.status, fallback.status)
+  };
+}
+
+function normalizePerson(value, fallback) {
+  return {
+    name: normalizeLocalized(value?.name || value?.person, fallback.name),
+    roles: Array.isArray(value?.roles)
+      ? value.roles.map((item) => normalizePersonRole(item, personRoleTemplate()))
+      : fallback.roles.map((item) => normalizePersonRole(item, personRoleTemplate())),
+    status: normalizeString(value?.status, fallback.status),
+    note: normalizeLocalized(value?.note, fallback.note)
+  };
+}
+
+function normalizeMonthlyPresident(value, fallback) {
   return {
     person: normalizeLocalized(value?.person, fallback.person),
-    primaryRole: normalizeLocalized(value?.primaryRole, fallback.primaryRole),
-    concurrentRole: normalizeLocalized(value?.concurrentRole, fallback.concurrentRole),
     period: normalizeLocalized(value?.period, fallback.period),
-    status: normalizeString(value?.status, fallback.status),
     note: normalizeLocalized(value?.note, fallback.note)
   };
 }
@@ -411,13 +439,21 @@ export function normalizeContent(value = {}) {
         value.organization?.leadership || legacyTeams[0],
         fallback.organization.leadership
       ),
+      monthlyPresident: normalizeMonthlyPresident(
+        value.organization?.monthlyPresident || {
+          person: value.organization?.presidentRotation?.currentPresident,
+          period: value.organization?.presidentRotation?.currentPeriod,
+          note: value.organization?.presidentRotation?.note
+        },
+        fallback.organization.monthlyPresident
+      ),
       presidentRotation: normalizePresidentRotation(
         value.organization?.presidentRotation,
         fallback.organization.presidentRotation
       ),
-      concurrentRoles: Array.isArray(value.organization?.concurrentRoles)
-        ? value.organization.concurrentRoles.map((item) => normalizeConcurrentRole(item, concurrentRoleTemplate()))
-        : fallback.organization.concurrentRoles.map((item) => normalizeConcurrentRole(item, concurrentRoleTemplate())),
+      people: Array.isArray(value.organization?.people)
+        ? value.organization.people.map((item) => normalizePerson(item, personTemplate()))
+        : fallback.organization.people.map((item) => normalizePerson(item, personTemplate())),
       departments: Array.isArray(departmentSeed)
         ? departmentSeed.map((item) => normalizeDepartment(item, departmentTemplate()))
         : fallback.organization.departments.map((item) => normalizeDepartment(item, departmentTemplate()))

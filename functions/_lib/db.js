@@ -1,4 +1,5 @@
 import { createDefaultContent, normalizeContent } from "./default-content.js";
+import { deleteStaleUpdateAttachments, dehydrateLongTextFields, hydrateLongTextFields } from "./content-storage.js";
 
 const RECORD_ID = "portal";
 const SCHEMA =
@@ -45,8 +46,10 @@ export async function getContentRecord(env) {
     };
   }
 
+  const hydrated = await hydrateLongTextFields(env, parsed);
+
   return {
-    content: normalizeContent(parsed),
+    content: normalizeContent(hydrated),
     updatedAt: row.updated_at,
     storage: "d1"
   };
@@ -60,6 +63,7 @@ export async function saveContentRecord(env, content) {
   await ensureDatabase(env);
 
   const normalized = normalizeContent(content);
+  const stored = await dehydrateLongTextFields(env, normalized);
   const updatedAt = new Date().toISOString();
   await env.DB.prepare(
     `
@@ -70,8 +74,9 @@ export async function saveContentRecord(env, content) {
         updated_at = excluded.updated_at
     `
   )
-    .bind(RECORD_ID, JSON.stringify(normalized), updatedAt)
+    .bind(RECORD_ID, JSON.stringify(stored), updatedAt)
     .run();
+  await deleteStaleUpdateAttachments(env, normalized);
 
   return {
     content: normalized,
@@ -85,6 +90,7 @@ async function ensureDatabase(env) {
 
 async function initializeContentRecord(env) {
   const seeded = normalizeContent(createDefaultContent());
+  const stored = await dehydrateLongTextFields(env, seeded);
   const updatedAt = new Date().toISOString();
 
   await env.DB.prepare(
@@ -96,7 +102,7 @@ async function initializeContentRecord(env) {
         updated_at = excluded.updated_at
     `
   )
-    .bind(RECORD_ID, JSON.stringify(seeded), updatedAt)
+    .bind(RECORD_ID, JSON.stringify(stored), updatedAt)
     .run();
 
   return {
