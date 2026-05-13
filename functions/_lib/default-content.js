@@ -22,6 +22,29 @@ function activityTemplate() {
   };
 }
 
+function updateAttachmentTemplate() {
+  return {
+    label: localized("", ""),
+    url: "",
+    key: "",
+    name: "",
+    type: "",
+    size: 0
+  };
+}
+
+function updateTemplate() {
+  return {
+    title: localized("", ""),
+    date: new Date().toISOString(),
+    tag: "UPDATE",
+    summary: localized("", ""),
+    body: localized("", ""),
+    attachments: [],
+    published: true
+  };
+}
+
 function financeCategoryTemplate() {
   return {
     label: localized("", ""),
@@ -143,6 +166,11 @@ export function createDefaultContent() {
       intro: localized("", ""),
       items: []
     },
+    updates: {
+      heading: localized("动态更新", "Updates"),
+      intro: localized("", ""),
+      items: []
+    },
     finance: {
       heading: localized("财务与资源公开", "Finance and resource disclosure"),
       intro: localized("", ""),
@@ -235,6 +263,50 @@ function normalizeActivity(value, fallback) {
     location: normalizeLocalized(value?.location, fallback.location),
     status: normalizeString(value?.status, fallback.status),
     summary: normalizeLocalized(value?.summary, fallback.summary),
+    published: normalizeBoolean(value?.published, fallback.published)
+  };
+}
+
+function sanitizeRichText(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value
+    .replace(/<\s*(script|style|iframe|object|embed|form|input|button|textarea|select)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+    .replace(/<\s*\/?\s*(script|style|iframe|object|embed|form|input|button|textarea|select)[^>]*>/gi, "")
+    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/\s+(href|src)\s*=\s*("javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]+)/gi, "");
+}
+
+function normalizeRichLocalized(value, fallback) {
+  return {
+    zh: sanitizeRichText(normalizeString(value?.zh, fallback.zh)),
+    en: sanitizeRichText(normalizeString(value?.en, fallback.en))
+  };
+}
+
+function normalizeUpdateAttachment(value, fallback) {
+  return {
+    label: normalizeLocalized(value?.label, fallback.label),
+    url: normalizeString(value?.url, fallback.url),
+    key: normalizeString(value?.key, fallback.key),
+    name: normalizeString(value?.name, fallback.name),
+    type: normalizeString(value?.type, fallback.type),
+    size: normalizeNumber(value?.size, fallback.size)
+  };
+}
+
+function normalizeUpdate(value, fallback) {
+  return {
+    title: normalizeLocalized(value?.title, fallback.title),
+    date: normalizeString(value?.date, fallback.date),
+    tag: normalizeString(value?.tag, fallback.tag),
+    summary: normalizeLocalized(value?.summary, fallback.summary),
+    body: normalizeRichLocalized(value?.body, fallback.body),
+    attachments: Array.isArray(value?.attachments)
+      ? value.attachments.map((item) => normalizeUpdateAttachment(item, updateAttachmentTemplate()))
+      : fallback.attachments.map((item) => normalizeUpdateAttachment(item, updateAttachmentTemplate())),
     published: normalizeBoolean(value?.published, fallback.published)
   };
 }
@@ -356,6 +428,13 @@ export function normalizeContent(value = {}) {
       items: Array.isArray(value.activities?.items)
         ? value.activities.items.map((item) => normalizeActivity(item, activityTemplate()))
         : fallback.activities.items.map((item) => normalizeActivity(item, activityTemplate()))
+    },
+    updates: {
+      heading: normalizeLocalized(value.updates?.heading, fallback.updates.heading),
+      intro: normalizeLocalized(value.updates?.intro, fallback.updates.intro),
+      items: Array.isArray(value.updates?.items)
+        ? value.updates.items.map((item) => normalizeUpdate(item, updateTemplate()))
+        : fallback.updates.items.map((item) => normalizeUpdate(item, updateTemplate()))
     },
     finance: {
       heading: normalizeLocalized(value.finance?.heading, fallback.finance.heading),

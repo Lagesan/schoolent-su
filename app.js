@@ -314,22 +314,26 @@ function renderAppModeHub(content, language, meta) {
   }
 
   const publishedActivities = toArray(content.activities?.items).filter((item) => item.published);
+  const richUpdates = toArray(content.updates?.items).filter((item) => item.published);
   const initiatives = toArray(content.initiatives?.items);
   const activeNotices = toArray(content.notices).filter((notice) => notice.active);
   const nextActivity = publishedActivities
     .slice()
     .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())[0];
   const latestProposal = initiatives[0];
+  const latestUpdate = richUpdates
+    .slice()
+    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())[0];
   const email = content.footer?.presidentEmail || "";
   const hasBridge = hasNativeBridge();
   const appVersion = readAppVersion();
-  const spotlightTitle = pick(nextActivity?.title) || pick(latestProposal?.title) || "";
-  const spotlightMeta = nextActivity
+  const spotlightTitle = pick(latestUpdate?.title) || pick(nextActivity?.title) || pick(latestProposal?.title) || "";
+  const spotlightMeta = latestUpdate ? `Update Â· ${formatDate(latestUpdate.date)}` : nextActivity
     ? `${language.app.nextActivity} · ${formatDate(nextActivity.date)}`
     : latestProposal
       ? `${language.app.latestProposal} · ${pick(latestProposal.owner)}`
       : "";
-  const spotlightCopy = nextActivity
+  const spotlightCopy = latestUpdate ? pick(latestUpdate.summary) : nextActivity
     ? pick(nextActivity.summary)
     : latestProposal
       ? pick(latestProposal.summary)
@@ -341,7 +345,7 @@ function renderAppModeHub(content, language, meta) {
     },
     {
       label: language.metrics.activities,
-      value: String(publishedActivities.length)
+      value: String(publishedActivities.length + richUpdates.length)
     },
     {
       label: language.metrics.finance,

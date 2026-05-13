@@ -43,7 +43,7 @@
 }
 
 .editor-toolbar {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
 }
 
@@ -196,10 +196,77 @@
   padding: 8px 12px;
 }
 
+.rich-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rich-field,
+.attachment-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.rich-head,
+.attachment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rich-head span {
+  color: var(--text-faint);
+  font-size: 0.86rem;
+  letter-spacing: 0.06em;
+}
+
+.rich-toolbar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rich-toolbar button {
+  min-width: 34px;
+  min-height: 30px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.rich-editor {
+  min-height: 220px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.rich-editor:focus {
+  border-color: var(--line-strong);
+}
+
+.attachment-row {
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.attachment-row span {
+  color: var(--text-faint);
+  font-size: 0.84rem;
+}
+
 @media (max-width: 960px) {
   .editor-grid,
   .editor-toolbar,
-  .preview-grid {
+  .preview-grid,
+  .rich-grid {
     grid-template-columns: 1fr;
   }
 }

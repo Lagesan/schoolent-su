@@ -55,6 +55,15 @@ const factories = {
     summary: { zh: "", en: "" },
     published: true
   }),
+  "updates.items": () => ({
+    title: { zh: "", en: "" },
+    date: new Date().toISOString(),
+    tag: "UPDATE",
+    summary: { zh: "", en: "" },
+    body: { zh: "", en: "" },
+    attachments: [],
+    published: true
+  }),
   "finance.categories": () => ({
     label: { zh: "", en: "" },
     amount: 0,
@@ -168,6 +177,7 @@ function renderEditor() {
     <div class="editor-layout">
       <div class="editor-toolbar">
         <button class="button button-primary" type="button" data-action="save">保存并发布</button>
+        <button class="button button-secondary" type="button" data-action="export">导出离线包</button>
         <a class="button button-secondary" href="/" target="_blank" rel="noreferrer">打开前台</a>
         <button class="button button-plain" type="button" data-action="logout">退出登录</button>
       </div>
@@ -403,6 +413,46 @@ function renderEditor() {
       </section>
 
       <section class="editor-section">
+        <h3>Updates 富文本发布</h3>
+        <p class="help-copy">新的 Updates 会优先显示在 /updates/ 页面。正文支持基础 HTML 富文本，附件会上传到 R2 并写入当前 Update。</p>
+        <div class="editor-grid">
+          ${localizedFields("模块标题", "updates.heading", state.content.updates.heading)}
+        </div>
+        <div class="stack-list">
+          ${state.content.updates.items
+            .map((item, index) =>
+              listItem({
+                title: pickLocal(item.title),
+                meta: `${item.tag} / ${item.published ? "已公开" : "未公开"}`,
+                body: `
+                  <div class="checkbox-row">
+                    <input id="update-published-${index}" type="checkbox" data-path="updates.items[${index}].published" ${item.published ? "checked" : ""} />
+                    <label for="update-published-${index}">前台公开显示</label>
+                  </div>
+                  <div class="list-body">
+                    <div class="editor-grid">
+                      ${localizedFields("标题", `updates.items[${index}].title`, item.title)}
+                      ${inputField("日期时间", `updates.items[${index}].date`, item.date)}
+                      ${inputField("标签", `updates.items[${index}].tag`, item.tag)}
+                      ${localizedFields("摘要", `updates.items[${index}].summary`, item.summary, true)}
+                    </div>
+                    ${richTextFields("正文", `updates.items[${index}].body`, item.body)}
+                    ${attachmentEditor(index, item.attachments || [])}
+                    <div class="row-actions">
+                      <button class="button button-danger" type="button" data-action="remove" data-array-path="updates.items" data-index="${index}">删除 Update</button>
+                    </div>
+                  </div>
+                `
+              })
+            )
+            .join("")}
+        </div>
+        <div class="row-actions">
+          <button class="button button-secondary" type="button" data-action="add" data-array-path="updates.items">新增 Update</button>
+        </div>
+      </section>
+
+      <section class="editor-section">
         <h3>财务公开</h3>
         <div class="editor-grid">
           ${localizedFields("模块标题", "finance.heading", state.content.finance.heading)}
@@ -586,6 +636,18 @@ async function handleLoginSubmit(event) {
 
 function handleFieldInput(event) {
   const target = event.target;
+  if (target.matches("[data-upload-input]") && target.files?.length) {
+    uploadAttachment(Number(target.dataset.uploadInput), target.files[0]);
+    target.value = "";
+    return;
+  }
+
+  const richPath = target.dataset.richPath;
+  if (richPath && state.content) {
+    setByPath(state.content, richPath, target.innerHTML);
+    return;
+  }
+
   const path = target.dataset.path;
   if (!path || !state.content) {
     return;
@@ -617,6 +679,31 @@ async function handleEditorClick(event) {
     const array = getByPath(state.content, path);
     array.splice(index, 1);
     renderEditor();
+    return;
+  }
+
+  if (action === "remove-attachment") {
+    const updateIndex = Number(button.dataset.updateIndex);
+    const attachmentIndex = Number(button.dataset.attachmentIndex);
+    state.content.updates.items[updateIndex].attachments.splice(attachmentIndex, 1);
+    renderEditor();
+    return;
+  }
+
+  if (action === "upload-attachment") {
+    const updateIndex = Number(button.dataset.updateIndex);
+    const input = dom.editorPanel.querySelector(`[data-upload-input="${updateIndex}"]`);
+    input?.click();
+    return;
+  }
+
+  if (action === "rich-command") {
+    applyRichCommand(button);
+    return;
+  }
+
+  if (action === "export") {
+    window.location.href = "/api/admin/export";
     return;
   }
 
@@ -657,6 +744,49 @@ async function saveContent() {
   }
 }
 
+function applyRichCommand(button) {
+  const command = button.dataset.command;
+  const value = button.dataset.value || null;
+  if (command === "createLink") {
+    const url = window.prompt("输入链接 URL");
+    if (!url) {
+      return;
+    }
+    document.execCommand(command, false, url);
+    return;
+  }
+
+  document.execCommand(command, false, value);
+}
+
+async function uploadAttachment(updateIndex, file) {
+  if (!file) {
+    return;
+  }
+
+  setStatus("正在上传附件到 R2...", "warn");
+  const form = new FormData();
+  form.append("file", file);
+
+  try {
+    const response = await fetch("/api/admin/assets", {
+      method: "POST",
+      body: form
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "附件上传失败");
+    }
+
+    state.content.updates.items[updateIndex].attachments.push(payload.asset);
+    renderEditor();
+    setStatus("附件已上传并加入当前 Update。", "ok");
+  } catch (error) {
+    console.error(error);
+    setStatus(error.message || "附件上传失败", "error");
+  }
+}
+
 async function logout() {
   try {
     await fetch("/api/admin/session", {
@@ -688,6 +818,61 @@ function localizedFields(label, path, value, multiline = false) {
   return `
     ${multiline ? textareaField(`${label}（中文）`, `${path}.zh`, safeValue.zh) : inputField(`${label}（中文）`, `${path}.zh`, safeValue.zh)}
     ${multiline ? textareaField(`${label}（English）`, `${path}.en`, safeValue.en) : inputField(`${label}（English）`, `${path}.en`, safeValue.en)}
+  `;
+}
+
+function richTextFields(label, path, value) {
+  const safeValue = value || { zh: "", en: "" };
+  return `
+    <div class="rich-grid">
+      ${richTextField(`${label}（中文）`, `${path}.zh`, safeValue.zh)}
+      ${richTextField(`${label}（English）`, `${path}.en`, safeValue.en)}
+    </div>
+  `;
+}
+
+function richTextField(label, path, value) {
+  return `
+    <section class="rich-field">
+      <div class="rich-head">
+        <span>${escapeHtml(label)}</span>
+        <div class="rich-toolbar">
+          <button type="button" data-action="rich-command" data-command="formatBlock" data-value="h3">H</button>
+          <button type="button" data-action="rich-command" data-command="bold">B</button>
+          <button type="button" data-action="rich-command" data-command="italic">I</button>
+          <button type="button" data-action="rich-command" data-command="insertUnorderedList">UL</button>
+          <button type="button" data-action="rich-command" data-command="createLink">Link</button>
+        </div>
+      </div>
+      <div class="rich-editor" contenteditable="true" data-rich-path="${escapeHtml(path)}">${value || ""}</div>
+    </section>
+  `;
+}
+
+function attachmentEditor(updateIndex, attachments) {
+  return `
+    <section class="attachment-editor">
+      <div class="list-header">
+        <strong>附件 / R2 对象</strong>
+        <button class="button button-secondary" type="button" data-action="upload-attachment" data-update-index="${updateIndex}">上传附件</button>
+        <input type="file" data-upload-input="${updateIndex}" hidden />
+      </div>
+      <div class="stack-list">
+        ${attachments.length
+          ? attachments
+            .map(
+              (item, attachmentIndex) => `
+                <div class="attachment-row">
+                  <a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">${escapeHtml(pickLocal(item.label) || item.name || item.key || "附件")}</a>
+                  <span>${escapeHtml(item.type || "")} ${item.size ? ` / ${formatBytes(item.size)}` : ""}</span>
+                  <button class="button button-danger" type="button" data-action="remove-attachment" data-update-index="${updateIndex}" data-attachment-index="${attachmentIndex}">移除</button>
+                </div>
+              `
+            )
+            .join("")
+          : `<p class="help-copy">暂无附件。</p>`}
+      </div>
+    </section>
   `;
 }
 
@@ -804,6 +989,17 @@ function formatDate(value) {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(date);
+}
+
+function formatBytes(value) {
+  const size = Number(value || 0);
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function escapeHtml(value) {

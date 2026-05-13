@@ -1,7 +1,14 @@
 import { createSessionCookie, validatePassword } from "../../_lib/auth.js";
 import { errorJson, json, readJson } from "../../_lib/http.js";
+import { assertSameOrigin } from "../../_lib/security.js";
 
 export async function onRequestPost({ request, env }) {
+  try {
+    assertSameOrigin(request);
+  } catch (error) {
+    return errorJson(error.message, 403);
+  }
+
   try {
     const body = await readJson(request);
     const password = String(body.password || "");

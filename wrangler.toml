@@ -6,3 +6,7 @@ pages_build_output_dir = "."
 binding = "DB"
 database_name = "db"
 database_id = "1a1f69a3-8436-4ed8-af48-979f3261955a"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "schoolent-su-uploads"

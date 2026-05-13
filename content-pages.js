@@ -31,6 +31,7 @@ const ui = {
         publications: "公开纪要"
       },
       labels: {
+        update: "Update",
         notice: "通知",
         activity: "活动",
         publication: "纪要"
@@ -65,6 +66,7 @@ const ui = {
         publications: "Public Notes"
       },
       labels: {
+        update: "Update",
         notice: "Notice",
         activity: "Activity",
         publication: "Note"
@@ -158,9 +160,41 @@ function render() {
 
 function renderUpdates(content, pageUi, lang) {
   const blocks = [];
+  const richUpdates = toArray(content.updates?.items).filter((item) => item.published);
   const notices = toArray(content.notices).filter((item) => item.active);
   const activities = toArray(content.activities?.items).filter((item) => item.published);
   const publications = toArray(content.publications?.items);
+
+  richUpdates
+    .slice()
+    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
+    .forEach((item) => {
+      const attachments = toArray(item.attachments).filter((attachment) => attachment.url);
+      blocks.push(`
+        <article class="stream-card stream-card-rich">
+          <div class="stream-meta">
+            <span class="tag">${escapeHtml(item.tag || pageUi.labels.update)}</span>
+            <span>${escapeHtml(formatDate(item.date))}</span>
+          </div>
+          <h3>${escapeHtml(pick(item.title))}</h3>
+          ${pick(item.summary) ? `<p class="stream-copy">${escapeHtml(pick(item.summary))}</p>` : ""}
+          <div class="stream-rich">${sanitizeRichHtml(pick(item.body))}</div>
+          ${attachments.length ? `
+            <div class="stream-attachments">
+              ${attachments
+                .map(
+                  (attachment) => `
+                    <a href="${escapeAttribute(attachment.url)}" target="_blank" rel="noreferrer">
+                      ${escapeHtml(pick(attachment.label) || attachment.name || "Attachment")}
+                    </a>
+                  `
+                )
+                .join("")}
+            </div>
+          ` : ""}
+        </article>
+      `);
+    });
 
   notices.forEach((item) => {
     blocks.push(`
@@ -296,6 +330,26 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("`", "&#96;");
+}
+
+function sanitizeRichHtml(value) {
+  const template = document.createElement("template");
+  template.innerHTML = String(value || "");
+  template.content.querySelectorAll("script,style,iframe,object,embed,form,input,button,textarea,select").forEach((node) => node.remove());
+  template.content.querySelectorAll("*").forEach((node) => {
+    [...node.attributes].forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+      if (name.startsWith("on") || ((name === "href" || name === "src") && value.startsWith("javascript:"))) {
+        node.removeAttribute(attribute.name);
+      }
+    });
+  });
+  return template.innerHTML;
 }
 
 function emptyState(message) {

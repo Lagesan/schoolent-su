@@ -481,6 +481,46 @@ select {
   color: var(--text-muted);
 }
 
+.stream-rich {
+  color: var(--text-muted);
+  margin-top: 18px;
+}
+
+.stream-rich h1,
+.stream-rich h2,
+.stream-rich h3,
+.stream-rich h4 {
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
+.stream-rich a {
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.stream-rich img,
+.stream-rich video {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+}
+
+.stream-attachments {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.stream-attachments a {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .stream-card-notice {
   border-color: rgba(245, 215, 110, 0.45);
 }
