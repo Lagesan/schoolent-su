@@ -408,15 +408,15 @@ function renderAppModeHub(content, language, meta) {
       </div>
       <div class="app-summary-grid">
         ${summaryCards
-          .map(
-            (card) => `
+      .map(
+        (card) => `
               <article class="app-summary-card">
                 <p>${escapeHtml(card.label)}</p>
                 <strong>${escapeHtml(card.value)}</strong>
               </article>
             `
-          )
-          .join("")}
+      )
+      .join("")}
       </div>
     </section>
 
@@ -427,21 +427,21 @@ function renderAppModeHub(content, language, meta) {
       </div>
       <div class="app-action-grid">
         ${actionItems
-          .map((item) => {
-            if (item.type === "link") {
-              return `<a class="app-action-chip" href="${escapeAttribute(item.href)}">${escapeHtml(item.label)}</a>`;
-            }
+      .map((item) => {
+        if (item.type === "link") {
+          return `<a class="app-action-chip" href="${escapeAttribute(item.href)}">${escapeHtml(item.label)}</a>`;
+        }
 
-            if (item.type === "mail") {
-              const disabled = item.disabled ? ' aria-disabled="true" tabindex="-1"' : "";
-              const className = item.disabled ? "app-action-chip is-disabled" : "app-action-chip";
-              return `<a class="${className}" href="${escapeAttribute(item.href)}"${disabled}>${escapeHtml(item.label)}</a>`;
-            }
+        if (item.type === "mail") {
+          const disabled = item.disabled ? ' aria-disabled="true" tabindex="-1"' : "";
+          const className = item.disabled ? "app-action-chip is-disabled" : "app-action-chip";
+          return `<a class="${className}" href="${escapeAttribute(item.href)}"${disabled}>${escapeHtml(item.label)}</a>`;
+        }
 
-            const disabled = item.disabled ? " disabled" : "";
-            return `<button class="app-action-chip" type="button" data-app-action="${escapeAttribute(item.action)}"${disabled}>${escapeHtml(item.label)}</button>`;
-          })
-          .join("")}
+        const disabled = item.disabled ? " disabled" : "";
+        return `<button class="app-action-chip" type="button" data-app-action="${escapeAttribute(item.action)}"${disabled}>${escapeHtml(item.label)}</button>`;
+      })
+      .join("")}
       </div>
     </section>
 
@@ -573,8 +573,8 @@ function renderOrganization(organization, language) {
           <p class="section-label">${escapeHtml(language.organization.peopleTitle.toUpperCase())}</p>
           <div class="org-people-grid">
             ${people
-              .map(
-                (person) => `
+        .map(
+          (person) => `
                   <article class="org-person-card">
                     <div class="timeline-meta">
                       <span>${escapeHtml(person.status || "ACTIVE")}</span>
@@ -583,22 +583,22 @@ function renderOrganization(organization, language) {
                     <h4>${escapeHtml(pick(person.name))}</h4>
                     <div class="org-role-stack">
                       ${toArray(person.roles)
-                        .map(
-                          (role) => `
+              .map(
+                (role) => `
                             <div class="org-role-chip">
                               <strong>${escapeHtml(pick(role.title))}</strong>
                               <span>${escapeHtml(role.status || "ACTIVE")}</span>
                               ${renderOptionalParagraph("org-copy", pick(role.scope))}
                             </div>
                           `
-                        )
-                        .join("")}
+              )
+              .join("")}
                     </div>
                     ${renderOptionalParagraph("org-copy", pick(person.note))}
                   </article>
                 `
-              )
-              .join("")}
+        )
+        .join("")}
           </div>
         </section>
       ` : ""}
@@ -614,9 +614,9 @@ function renderOrganization(organization, language) {
           </div>
           <div class="org-rotation-list">
             ${rotationMembers.length
-              ? rotationMembers
-                .map(
-                  (item) => `
+        ? rotationMembers
+          .map(
+            (item) => `
                     <article class="org-rotation-card${String(item.status || "").toUpperCase() === "CURRENT" ? " is-current" : ""}">
                       <div class="timeline-meta">
                         <span>${escapeHtml(language.organization.rotationOrder)} #${escapeHtml(String(item.order || ""))}</span>
@@ -627,17 +627,17 @@ function renderOrganization(organization, language) {
                       ${renderOptionalParagraph("org-copy", pick(item.note))}
                     </article>
                   `
-                )
-                .join("")
-              : `<div class="empty-state"><p class="empty-title">${escapeHtml(language.common.noItems)}</p></div>`
-            }
+          )
+          .join("")
+        : `<div class="empty-state"><p class="empty-title">${escapeHtml(language.common.noItems)}</p></div>`
+      }
           </div>
         </section>
       ` : ""}
       <div class="org-grid">
         ${departments
-          .map(
-            (department) => `
+      .map(
+        (department) => `
               <article class="org-node">
                 <div class="org-link-label">${escapeHtml(language.common.connect)}</div>
                 <p class="tag">${escapeHtml(department.status || "ACTIVE")}</p>
@@ -645,8 +645,8 @@ function renderOrganization(organization, language) {
                 ${renderOptionalParagraph("org-copy", pick(department.scope))}
               </article>
             `
-          )
-          .join("")}
+      )
+      .join("")}
       </div>
     </article>
   `;
@@ -768,16 +768,16 @@ function renderFinance(finance, language) {
         </thead>
         <tbody>
           ${categories
-            .map(
-              (item) => `
+      .map(
+        (item) => `
                 <tr>
                   <td>${escapeHtml(pick(item.label))}</td>
                   <td>${escapeHtml(formatCurrency(item.amount))}</td>
                   <td>${escapeHtml(pick(item.note))}</td>
                 </tr>
               `
-            )
-            .join("")}
+      )
+      .join("")}
         </tbody>
       </table>
       <p class="finance-disclaimer">
@@ -874,15 +874,15 @@ function renderFooter(content, meta, language) {
         <p>${escapeHtml(language.common.updatedAt)}: ${escapeHtml(updated)}</p>
         <div class="footer-socials" ${links.length ? "" : "hidden"}>
           ${links
-            .map(
-              (link) => `
+      .map(
+        (link) => `
                 <a class="social-link" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer">
                   <span class="social-icon" aria-hidden="true">${escapeHtml(resolveSocialIcon(link.icon))}</span>
                   <span>${escapeHtml(pick(link.label))}</span>
                 </a>
               `
-            )
-            .join("")}
+      )
+      .join("")}
         </div>
         <div class="footer-badges" ${badges.length ? "" : "hidden"}>
           ${badges.map((badge) => `<p class="tag">${escapeHtml(badge)}</p>`).join("")}
@@ -928,16 +928,19 @@ function sharePortal() {
   }
 
   if (navigator.share) {
-    navigator.share({ title, text, url }).catch(() => {});
+    navigator.share({ title, text, url }).catch(() => { });
     return;
   }
 
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(url).catch(() => {});
+    navigator.clipboard.writeText(url).catch(() => { });
   }
 }
 
-function showSchoolentDeclaration() {
+function showSchoolentDeclaration(event) {
+  event?.currentTarget?.classList.add("is-pressed");
+  window.setTimeout(() => event?.currentTarget?.classList.remove("is-pressed"), 360);
+
   const existing = document.querySelector(".declaration-popover");
   existing?.remove();
 
@@ -948,7 +951,7 @@ function showSchoolentDeclaration() {
       <button class="declaration-close" type="button" aria-label="Close">×</button>
       <p class="section-label">SCHOOLENT DECLARATION</p>
       <h3>Schoolent</h3>
-      <p>这里将显示你后续硬编码的声明文本。</p>
+      <p>Schoolent是。</p>
     </div>
   `;
   document.body.append(popover);

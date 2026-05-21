@@ -88,7 +88,8 @@ const dom = {
   title: document.querySelector("#pageTitle"),
   subtitle: document.querySelector("#pageSubtitle"),
   updatedAt: document.querySelector("#pageUpdatedAt"),
-  stream: document.querySelector("#pageStream")
+  stream: document.querySelector("#pageStream"),
+  footer: document.querySelector("#detailFooter")
 };
 
 document.querySelectorAll("[data-lang-trigger]").forEach((button) => {
@@ -149,6 +150,7 @@ function render() {
 
   setText(dom.brandName, shortName);
   setText(dom.updatedAt, `${lang.common.updatedAt}: ${formatDate(state.meta?.updatedAt, true)}`);
+  renderDetailFooter(content, lang);
 
   if (pageType === "proposals") {
     setText(dom.badge, lang.common.proposalsBadge);
@@ -267,17 +269,21 @@ function renderDetailPage(content, pageUi, lang) {
   setText(dom.subtitle, type === "activity" ? pick(item.summary) : pick(item.summary) || stripHtml(pick(item.body)));
 
   dom.stream.innerHTML = type === "activity" ? renderActivityDetail(item, pageUi) : renderUpdateDetail(item, pageUi);
+  setupMediaControls(dom.stream);
 }
 
 function renderUpdateDetail(item, pageUi) {
   const attachments = toArray(item.attachments).filter((attachment) => attachment.url);
+  const body = pick(item.body) || escapeHtml(pick(item.summary));
   return `
-    <article class="stream-card detail-card">
-      <div class="stream-meta">
+    <article class="detail-document">
+      <aside class="detail-document-rail" aria-label="Article metadata">
         <span class="tag">${escapeHtml(item.tag || pageUi.labels.update)}</span>
         <span>${escapeHtml(formatDate(item.date, true))}</span>
+      </aside>
+      <div class="detail-document-body">
+        ${renderReadableBody(body)}
       </div>
-      <div class="stream-rich detail-rich">${sanitizeRichHtml(pick(item.body) || escapeHtml(pick(item.summary)))}</div>
       ${attachments.length ? renderAttachments(attachments) : ""}
     </article>
   `;
@@ -285,16 +291,77 @@ function renderUpdateDetail(item, pageUi) {
 
 function renderActivityDetail(item, pageUi) {
   return `
-    <article class="stream-card detail-card">
-      <div class="stream-meta">
+    <article class="detail-document">
+      <aside class="detail-document-rail" aria-label="Activity metadata">
         <span class="tag">${escapeHtml(pageUi.labels.activity)}</span>
         <span>${escapeHtml(formatDate(item.date, true))}</span>
         ${pick(item.location) ? `<span>${escapeHtml(pick(item.location))}</span>` : ""}
         ${item.status ? `<span>${escapeHtml(item.status)}</span>` : ""}
+      </aside>
+      <div class="detail-document-body">
+        ${renderReadableBody(pick(item.summary))}
       </div>
-      <p class="stream-copy detail-copy">${escapeHtml(pick(item.summary))}</p>
     </article>
   `;
+}
+
+function renderReadableBody(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return `<p class="detail-empty-copy">No body content.</p>`;
+  }
+
+  if (looksLikeHtml(raw)) {
+    return `<div class="stream-rich detail-rich">${sanitizeRichHtml(raw)}</div>`;
+  }
+
+  return renderPlainTextBody(raw);
+}
+
+function renderPlainTextBody(value) {
+  const lines = value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return `<p class="detail-empty-copy">No body content.</p>`;
+  }
+
+  const [lead, ...rest] = lines;
+  const rows = rest
+    .map((line) => {
+      const match = line.match(/^([^:：]{1,24})[:：]\s*(.+)$/);
+      if (!match) {
+        return "";
+      }
+      return `
+        <div class="detail-fact-row">
+          <dt>${escapeHtml(match[1])}</dt>
+          <dd>${escapeHtml(match[2])}</dd>
+        </div>
+      `;
+    })
+    .filter(Boolean);
+
+  if (rows.length >= Math.max(2, rest.length - 1)) {
+    return `
+      <section class="detail-fact-sheet">
+        <p class="detail-kicker">${escapeHtml(lead)}</p>
+        <dl>${rows.join("")}</dl>
+      </section>
+    `;
+  }
+
+  return `
+    <div class="detail-prose">
+      ${lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}
+    </div>
+  `;
+}
+
+function looksLikeHtml(value) {
+  return /<\/?[a-z][\s\S]*>/i.test(value);
 }
 
 function renderAttachments(attachments) {
@@ -329,15 +396,137 @@ function renderAttachment(attachment) {
 
 function renderAttachmentPreview(url, type, label) {
   if (type.startsWith("image/")) {
-    return `<img class="attachment-preview" src="${escapeAttribute(url)}" alt="${escapeAttribute(label)}" loading="lazy" />`;
+    return `
+      <figure class="attachment-image-frame">
+        <img class="attachment-preview" src="${escapeAttribute(url)}" alt="${escapeAttribute(label)}" loading="lazy" />
+      </figure>
+    `;
   }
   if (type.startsWith("video/")) {
-    return `<video class="attachment-preview" src="${escapeAttribute(url)}" controls preload="metadata"></video>`;
+    return `
+      <div class="media-shell media-shell-video" data-media-shell>
+        <video class="attachment-preview media-target" src="${escapeAttribute(url)}" preload="metadata" playsinline></video>
+        <div class="media-controls" aria-label="Video controls">
+          <button class="media-play" type="button" data-media-play>Play</button>
+          <input class="media-range" type="range" min="0" max="1000" value="0" data-media-range aria-label="Seek video" />
+          <span class="media-time" data-media-time>0:00</span>
+        </div>
+      </div>
+    `;
   }
   if (type.startsWith("audio/")) {
-    return `<div class="attachment-audio"><audio src="${escapeAttribute(url)}" controls preload="metadata"></audio></div>`;
+    return `
+      <div class="media-shell media-shell-audio" data-media-shell>
+        <div class="media-audio-mark" aria-hidden="true">AUDIO</div>
+        <audio class="media-target" src="${escapeAttribute(url)}" preload="metadata"></audio>
+        <div class="media-controls" aria-label="Audio controls">
+          <button class="media-play" type="button" data-media-play>Play</button>
+          <input class="media-range" type="range" min="0" max="1000" value="0" data-media-range aria-label="Seek audio" />
+          <span class="media-time" data-media-time>0:00</span>
+        </div>
+      </div>
+    `;
   }
   return `<div class="attachment-file-icon" aria-hidden="true">FILE</div>`;
+}
+
+function setupMediaControls(root) {
+  root.querySelectorAll("[data-media-shell]").forEach((shell) => {
+    const media = shell.querySelector(".media-target");
+    const play = shell.querySelector("[data-media-play]");
+    const range = shell.querySelector("[data-media-range]");
+    const time = shell.querySelector("[data-media-time]");
+    if (!media || !play || !range || !time) {
+      return;
+    }
+
+    const sync = () => {
+      const duration = Number.isFinite(media.duration) ? media.duration : 0;
+      const current = Number.isFinite(media.currentTime) ? media.currentTime : 0;
+      range.value = duration ? String(Math.round((current / duration) * 1000)) : "0";
+      time.textContent = `${formatDuration(current)}${duration ? ` / ${formatDuration(duration)}` : ""}`;
+      play.textContent = media.paused ? "Play" : "Pause";
+      shell.classList.toggle("is-playing", !media.paused);
+    };
+
+    play.addEventListener("click", () => {
+      if (media.paused) {
+        media.play().catch(() => { });
+      } else {
+        media.pause();
+      }
+      sync();
+    });
+
+    range.addEventListener("input", () => {
+      if (Number.isFinite(media.duration) && media.duration > 0) {
+        media.currentTime = (Number(range.value) / 1000) * media.duration;
+      }
+      sync();
+    });
+
+    media.addEventListener("loadedmetadata", sync);
+    media.addEventListener("timeupdate", sync);
+    media.addEventListener("play", sync);
+    media.addEventListener("pause", sync);
+    media.addEventListener("ended", sync);
+    sync();
+  });
+}
+
+function renderDetailFooter(content, lang) {
+  if (!dom.footer) {
+    return;
+  }
+
+  const updated = state.meta?.updatedAt ? formatDate(state.meta.updatedAt, true) : "N/A";
+  const email = content.footer?.presidentEmail || "";
+  dom.footer.innerHTML = `
+    <button class="detail-schoolent-button" type="button" data-schoolent-declaration aria-label="Show Schoolent declaration">
+      <span class="detail-schoolent-orb">
+        <img src="/assets/schoolent-icon.png" alt="Schoolent" />
+        <span class="footer-brand-glow" aria-hidden="true"></span>
+      </span>
+      <span class="detail-schoolent-copy">
+        <strong>Schoolent</strong>
+        <span>${escapeHtml(lang.common.updatedAt)}: ${escapeHtml(updated)}</span>
+        ${email ? `<span>${escapeHtml(email)}</span>` : ""}
+      </span>
+    </button>
+  `;
+
+  dom.footer.querySelector("[data-schoolent-declaration]")?.addEventListener("click", showSchoolentDeclaration);
+}
+
+function showSchoolentDeclaration(event) {
+  event?.currentTarget?.classList.add("is-pressed");
+  window.setTimeout(() => event?.currentTarget?.classList.remove("is-pressed"), 360);
+
+  const existing = document.querySelector(".declaration-popover");
+  existing?.remove();
+
+  const popover = document.createElement("div");
+  popover.className = "declaration-popover";
+  popover.innerHTML = `
+    <div class="declaration-card" role="dialog" aria-modal="true" aria-label="Schoolent declaration">
+      <button class="declaration-close" type="button" aria-label="Close">×</button>
+      <p class="section-label">SCHOOLENT DECLARATION</p>
+      <h3>Schoolent</h3>
+      <p>Schoolent 是由KZID的Schoolent开发组创立和运维的标识，旨在为同学们提供学习资源分享、社交交流和项目实践的平台，与KSC完全独立，门户网站的活动和管理与本标识无关。</p>
+    </div>
+  `;
+  document.body.append(popover);
+  requestAnimationFrame(() => popover.classList.add("is-visible"));
+
+  const close = () => {
+    popover.classList.remove("is-visible");
+    window.setTimeout(() => popover.remove(), 220);
+  };
+  popover.addEventListener("click", (clickEvent) => {
+    if (clickEvent.target === popover || clickEvent.target.closest(".declaration-close")) {
+      close();
+    }
+  });
 }
 
 function renderProposals(items, pageUi, lang) {
@@ -462,6 +651,13 @@ function formatBytes(value) {
     return `${(size / 1024).toFixed(1)} KB`;
   }
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function formatDuration(value) {
+  const total = Math.max(0, Math.floor(Number(value || 0)));
+  const minutes = Math.floor(total / 60);
+  const seconds = String(total % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
 }
 
 function stripHtml(value) {
