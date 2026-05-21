@@ -34,7 +34,8 @@ const ui = {
         update: "Update",
         notice: "通知",
         activity: "活动",
-        publication: "纪要"
+        publication: "纪要",
+        read: "阅读正文"
       }
     },
     proposals: {
@@ -69,7 +70,8 @@ const ui = {
         update: "Update",
         notice: "Notice",
         activity: "Activity",
-        publication: "Note"
+        publication: "Note",
+        read: "Read"
       }
     },
     proposals: {
@@ -159,91 +161,96 @@ function render() {
 }
 
 function renderUpdates(content, pageUi, lang) {
-  const blocks = [];
-  const richUpdates = toArray(content.updates?.items).filter((item) => item.published);
-  const notices = toArray(content.notices).filter((item) => item.active);
-  const activities = toArray(content.activities?.items).filter((item) => item.published);
-  const publications = toArray(content.publications?.items);
-
-  richUpdates
-    .slice()
+  const blocks = toArray(content.updates?.items)
+    .filter((item) => item.published)
+    .map((item, index) => ({
+      date: item.date,
+      html: renderUpdateStreamCard(item, pageUi, index)
+    }))
+    .concat(
+      toArray(content.activities?.items)
+        .filter((item) => item.published)
+        .map((item) => ({
+          date: item.date,
+          html: renderSimpleStreamCard({
+            label: pageUi.labels.activity,
+            date: item.date,
+            title: item.title,
+            summary: item.summary,
+            extra: pick(item.location)
+          })
+        }))
+    )
+    .concat(
+      toArray(content.publications?.items)
+        .map((item) => ({
+          date: item.date,
+          html: renderSimpleStreamCard({
+            label: pageUi.labels.publication,
+            date: item.date,
+            title: item.title,
+            summary: item.summary,
+            extra: item.tag || ""
+          })
+        }))
+    )
     .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
-    .forEach((item) => {
-      const attachments = toArray(item.attachments).filter((attachment) => attachment.url);
-      blocks.push(`
-        <article class="stream-card stream-card-rich">
-          <div class="stream-meta">
-            <span class="tag">${escapeHtml(item.tag || pageUi.labels.update)}</span>
-            <span>${escapeHtml(formatDate(item.date))}</span>
-          </div>
-          <h3>${escapeHtml(pick(item.title))}</h3>
-          ${pick(item.summary) ? `<p class="stream-copy">${escapeHtml(pick(item.summary))}</p>` : ""}
-          <div class="stream-rich">${sanitizeRichHtml(pick(item.body))}</div>
-          ${attachments.length ? `
-            <div class="stream-attachments">
-              ${attachments
-                .map(
-                  (attachment) => `
-                    <a href="${escapeAttribute(attachment.url)}" target="_blank" rel="noreferrer">
-                      ${escapeHtml(pick(attachment.label) || attachment.name || "Attachment")}
-                    </a>
-                  `
-                )
-                .join("")}
-            </div>
-          ` : ""}
-        </article>
-      `);
-    });
-
-  notices.forEach((item) => {
-    blocks.push(`
-      <article class="stream-card stream-card-notice">
-        <div class="stream-meta">
-          <span class="tag">${escapeHtml(pageUi.labels.notice)}</span>
-          <span>${escapeHtml(pageUi.sections.notices)}</span>
-        </div>
-        <h3>${escapeHtml(pick(item.label))}</h3>
-        <p class="stream-copy">${escapeHtml(pick(item.message))}</p>
-      </article>
-    `);
-  });
-
-  activities
-    .slice()
-    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
-    .forEach((item) => {
-      blocks.push(`
-        <article class="stream-card">
-          <div class="stream-meta">
-            <span class="tag">${escapeHtml(pageUi.labels.activity)}</span>
-            <span>${escapeHtml(formatDate(item.date))}</span>
-            <span>${escapeHtml(pick(item.location))}</span>
-          </div>
-          <h3>${escapeHtml(pick(item.title))}</h3>
-          <p class="stream-copy">${escapeHtml(pick(item.summary))}</p>
-        </article>
-      `);
-    });
-
-  publications
-    .slice()
-    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
-    .forEach((item) => {
-      blocks.push(`
-        <article class="stream-card">
-          <div class="stream-meta">
-            <span class="tag">${escapeHtml(pageUi.labels.publication)}</span>
-            <span>${escapeHtml(formatDate(item.date))}</span>
-            <span>${escapeHtml(item.tag || "")}</span>
-          </div>
-          <h3>${escapeHtml(pick(item.title))}</h3>
-          <p class="stream-copy">${escapeHtml(pick(item.summary))}</p>
-        </article>
-      `);
-    });
+    .map((item) => item.html);
 
   dom.stream.innerHTML = blocks.length ? blocks.join("") : emptyState(lang.common.noItems);
+}
+
+function renderUpdateStreamCard(item, pageUi, index) {
+  const attachments = toArray(item.attachments).filter((attachment) => attachment.url);
+  const tag = String(item.tag || pageUi.labels.update).toUpperCase();
+  const className = tag === "NOTICE" ? "stream-card stream-card-rich stream-card-notice stream-details" : "stream-card stream-card-rich stream-details";
+  const open = state.isAppShell ? "" : " open";
+
+  return `
+    <details class="${className}" id="update-${index}"${open}>
+      <summary class="stream-summary">
+        <span class="stream-summary-main">
+          <span class="stream-meta">
+            <span class="tag">${escapeHtml(tag === "NOTICE" ? pageUi.labels.notice : item.tag || pageUi.labels.update)}</span>
+            <span>${escapeHtml(formatDate(item.date))}</span>
+          </span>
+          <span class="stream-title">${escapeHtml(pick(item.title))}</span>
+          ${pick(item.summary) ? `<span class="stream-copy">${escapeHtml(pick(item.summary))}</span>` : ""}
+        </span>
+        <span class="stream-open-label">${escapeHtml(pageUi.labels.read)}</span>
+      </summary>
+      <div class="stream-detail-body">
+        <div class="stream-rich">${sanitizeRichHtml(pick(item.body) || escapeHtml(pick(item.summary)))}</div>
+        ${attachments.length ? `
+          <div class="stream-attachments" aria-label="Attachments">
+            ${attachments
+              .map(
+                (attachment) => `
+                  <a href="${escapeAttribute(attachment.url)}" target="_blank" rel="noreferrer">
+                    ${escapeHtml(pick(attachment.label) || attachment.name || "Attachment")}
+                  </a>
+                `
+              )
+              .join("")}
+          </div>
+        ` : ""}
+      </div>
+    </details>
+  `;
+}
+
+function renderSimpleStreamCard({ label, date, title, summary, extra }) {
+  return `
+    <article class="stream-card">
+      <div class="stream-meta">
+        <span class="tag">${escapeHtml(label)}</span>
+        <span>${escapeHtml(formatDate(date))}</span>
+        ${extra ? `<span>${escapeHtml(extra)}</span>` : ""}
+      </div>
+      <h3>${escapeHtml(pick(title))}</h3>
+      <p class="stream-copy">${escapeHtml(pick(summary))}</p>
+    </article>
+  `;
 }
 
 function renderProposals(items, pageUi, lang) {

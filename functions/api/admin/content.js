@@ -11,12 +11,18 @@ export async function onRequestGet({ request, env }) {
 
   try {
     const record = await getContentRecord(env);
+    const migrated = record.migrationNeeded ? await saveContentRecord(env, record.content) : null;
+    const activeRecord = migrated
+      ? { content: migrated.content, updatedAt: migrated.updatedAt, storage: "d1" }
+      : record;
+
     return json({
       ok: true,
-      content: record.content,
+      content: activeRecord.content,
       meta: {
-        updatedAt: record.updatedAt,
-        storage: record.storage
+        updatedAt: activeRecord.updatedAt,
+        storage: activeRecord.storage,
+        migrated: Boolean(migrated)
       }
     });
   } catch (error) {

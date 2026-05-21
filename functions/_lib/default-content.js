@@ -44,6 +44,18 @@ function updateTemplate() {
   };
 }
 
+function noticeToUpdateTemplate(notice) {
+  return {
+    title: notice?.label || localized("", ""),
+    date: normalizeString(notice?.date, "1970-01-01T00:00:00.000Z"),
+    tag: "NOTICE",
+    summary: notice?.message || localized("", ""),
+    body: notice?.message || localized("", ""),
+    attachments: [],
+    published: normalizeBoolean(notice?.active, true)
+  };
+}
+
 function financeCategoryTemplate() {
   return {
     label: localized("", ""),
@@ -323,6 +335,18 @@ function normalizeUpdate(value, fallback) {
   };
 }
 
+function normalizeMergedUpdates(value, fallback) {
+  const updateItems = Array.isArray(value.updates?.items)
+    ? value.updates.items
+    : fallback.updates.items;
+  const legacyNotices = Array.isArray(value.notices) ? value.notices : [];
+  const migratedNotices = legacyNotices.map((item) => noticeToUpdateTemplate(normalizeNotice(item, noticeTemplate())));
+
+  return updateItems
+    .concat(migratedNotices)
+    .map((item) => normalizeUpdate(item, updateTemplate()));
+}
+
 function normalizePersonRole(value, fallback) {
   return {
     title: normalizeLocalized(value?.title, fallback.title),
@@ -429,9 +453,7 @@ export function normalizeContent(value = {}) {
       ctaPrimary: normalizeLocalized(value.hero?.ctaPrimary, fallback.hero.ctaPrimary),
       ctaSecondary: normalizeLocalized(value.hero?.ctaSecondary, fallback.hero.ctaSecondary)
     },
-    notices: Array.isArray(value.notices)
-      ? value.notices.map((item) => normalizeNotice(item, noticeTemplate()))
-      : fallback.notices.map((item) => normalizeNotice(item, noticeTemplate())),
+    notices: [],
     organization: {
       heading: normalizeLocalized(value.organization?.heading, fallback.organization.heading),
       intro: normalizeLocalized(value.organization?.intro, fallback.organization.intro),
@@ -468,9 +490,7 @@ export function normalizeContent(value = {}) {
     updates: {
       heading: normalizeLocalized(value.updates?.heading, fallback.updates.heading),
       intro: normalizeLocalized(value.updates?.intro, fallback.updates.intro),
-      items: Array.isArray(value.updates?.items)
-        ? value.updates.items.map((item) => normalizeUpdate(item, updateTemplate()))
-        : fallback.updates.items.map((item) => normalizeUpdate(item, updateTemplate()))
+      items: normalizeMergedUpdates(value, fallback)
     },
     finance: {
       heading: normalizeLocalized(value.finance?.heading, fallback.finance.heading),

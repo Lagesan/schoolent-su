@@ -1,5 +1,10 @@
 import { createDefaultContent, normalizeContent } from "./default-content.js";
-import { deleteStaleUpdateAttachments, dehydrateLongTextFields, hydrateLongTextFields } from "./content-storage.js";
+import {
+  deleteStaleUpdateAttachments,
+  dehydrateLongTextFields,
+  hydrateLongTextFields,
+  needsContentStorageMigration
+} from "./content-storage.js";
 
 const RECORD_ID = "portal";
 const SCHEMA =
@@ -46,12 +51,14 @@ export async function getContentRecord(env) {
     };
   }
 
+  const migrationNeeded = await needsContentStorageMigration(env, parsed);
   const hydrated = await hydrateLongTextFields(env, parsed);
 
   return {
     content: normalizeContent(hydrated),
     updatedAt: row.updated_at,
-    storage: "d1"
+    storage: "d1",
+    migrationNeeded
   };
 }
 

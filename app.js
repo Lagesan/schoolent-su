@@ -9,14 +9,14 @@ const ui = {
   zh: {
     nav: {
       organization: "架构",
-      activities: "活动",
+      activities: "更新",
       finance: "数据",
       initiatives: "提案",
       publications: "纪要"
     },
     labels: {
       organization: "组织关系",
-      activities: "近期活动",
+      activities: "公告 / 更新",
       finance: "透明数据",
       initiatives: "提案追踪",
       publications: "公开纪要"
@@ -81,14 +81,14 @@ const ui = {
   en: {
     nav: {
       organization: "Structure",
-      activities: "Activity",
+      activities: "Updates",
       finance: "Data",
       initiatives: "Proposals",
       publications: "Notes"
     },
     labels: {
       organization: "Organization Map",
-      activities: "Recent Activity",
+      activities: "Updates",
       finance: "Transparency Data",
       initiatives: "Proposal Tracker",
       publications: "Public Notes"
@@ -280,16 +280,16 @@ function render() {
   setText(dom.publicationsLabel, language.labels.publications.toUpperCase());
 
   setText(dom.organizationHeading, pick(content.organization?.heading));
-  setText(dom.activitiesHeading, pick(content.activities?.heading));
+  setText(dom.activitiesHeading, pick(content.updates?.heading) || pick(content.activities?.heading));
   setText(dom.financeHeading, pick(content.finance?.heading));
   setText(dom.initiativesHeading, pick(content.initiatives?.heading));
   setText(dom.publicationsHeading, pick(content.publications?.heading));
 
   renderAppModeHub(content, language, meta);
   renderMetrics(content, language);
-  renderNotices(content.notices);
+  renderNotices(content.updates?.items);
   renderOrganization(content.organization, language);
-  renderActivities(content.activities?.items);
+  renderActivities(content);
   renderFinance(content.finance, language);
   renderInitiatives(content.initiatives?.items);
   renderPublications(content.publications?.items);
@@ -316,7 +316,7 @@ function renderAppModeHub(content, language, meta) {
   const publishedActivities = toArray(content.activities?.items).filter((item) => item.published);
   const richUpdates = toArray(content.updates?.items).filter((item) => item.published);
   const initiatives = toArray(content.initiatives?.items);
-  const activeNotices = toArray(content.notices).filter((notice) => notice.active);
+  const activeNotices = richUpdates.filter((item) => String(item.tag || "").toUpperCase() === "NOTICE");
   const nextActivity = publishedActivities
     .slice()
     .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())[0];
@@ -462,6 +462,7 @@ function renderMetrics(content, language) {
   const departmentItems = toArray(content.organization?.departments);
   const hasLeadership = Boolean(pick(content.organization?.leadership?.title) || pick(content.organization?.leadership?.scope));
   const aiReady = Boolean(content.settings?.aiReady);
+  const publishedUpdates = toArray(content.updates?.items).filter((item) => item.published).length;
   const publishedActivities = activityItems.filter((item) => item.published).length;
   const metrics = [
     {
@@ -470,7 +471,7 @@ function renderMetrics(content, language) {
     },
     {
       label: language.metrics.activities,
-      value: publishedActivities
+      value: publishedUpdates + publishedActivities
     },
     {
       label: language.metrics.finance,
@@ -498,12 +499,12 @@ function renderMetrics(content, language) {
     .join("");
 }
 
-function renderNotices(notices) {
+function renderNotices(items) {
   if (!dom.noticeStrip) {
     return;
   }
 
-  const activeNotices = toArray(notices).filter((notice) => notice.active);
+  const activeNotices = toArray(items).filter((item) => item.published && String(item.tag || "").toUpperCase() === "NOTICE");
   if (!activeNotices.length) {
     dom.noticeStrip.hidden = true;
     dom.noticeStrip.innerHTML = "";
@@ -514,8 +515,10 @@ function renderNotices(notices) {
   dom.noticeStrip.innerHTML = activeNotices
     .map(
       (notice) => `
-        <span class="notice-label">${escapeHtml(pick(notice.label))}</span>
-        <span>${escapeHtml(pick(notice.message))}</span>
+        <a class="notice-link" href="/updates/${state.isAppShell ? "?app=1" : ""}">
+          <span class="notice-label">${escapeHtml(pick(notice.title) || "NOTICE")}</span>
+          <span>${escapeHtml(pick(notice.summary) || stripHtml(pick(notice.body)))}</span>
+        </a>
       `
     )
     .join("");
@@ -649,12 +652,36 @@ function renderOrganization(organization, language) {
   `;
 }
 
-function renderActivities(items) {
+function renderActivities(content) {
   if (!dom.activitiesList) {
     return;
   }
 
-  const published = toArray(items).filter((item) => item.published);
+  const updateItems = toArray(content?.updates?.items)
+    .filter((item) => item.published)
+    .map((item) => ({
+      type: String(item.tag || "UPDATE").toUpperCase(),
+      date: item.date,
+      title: item.title,
+      meta: item.tag || "UPDATE",
+      summary: item.summary,
+      href: `/updates/${state.isAppShell ? "?app=1" : ""}`
+    }));
+  const activityItems = toArray(content?.activities?.items)
+    .filter((item) => item.published)
+    .map((item) => ({
+      type: "ACTIVITY",
+      date: item.date,
+      title: item.title,
+      meta: [pick(item.location), item.status].filter(Boolean).join(" / "),
+      summary: item.summary,
+      href: `/updates/${state.isAppShell ? "?app=1" : ""}`
+    }));
+  const published = updateItems
+    .concat(activityItems)
+    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
+    .slice(0, 6);
+
   if (!published.length) {
     dom.activitiesList.innerHTML = emptyState();
     return;
@@ -663,15 +690,15 @@ function renderActivities(items) {
   dom.activitiesList.innerHTML = published
     .map(
       (item) => `
-        <article class="timeline-item">
+        <a class="timeline-item timeline-link" href="${escapeAttribute(item.href)}">
           <div class="timeline-meta">
             <span>${escapeHtml(formatDate(item.date))}</span>
-            <span>${escapeHtml(pick(item.location))}</span>
-            <span>${escapeHtml(item.status || "")}</span>
+            <span>${escapeHtml(item.type)}</span>
+            <span>${escapeHtml(item.meta || "")}</span>
           </div>
           <h4 class="timeline-title">${escapeHtml(pick(item.title))}</h4>
           <p class="timeline-copy">${escapeHtml(pick(item.summary))}</p>
-        </article>
+        </a>
       `
     )
     .join("");
@@ -957,6 +984,12 @@ function setOptionalText(node, value) {
 function renderOptionalParagraph(className, value) {
   const text = String(value || "").trim();
   return text ? `<p class="${className}">${escapeHtml(text)}</p>` : "";
+}
+
+function stripHtml(value) {
+  const element = document.createElement("div");
+  element.innerHTML = String(value || "");
+  return element.textContent || element.innerText || "";
 }
 
 function emptyState() {

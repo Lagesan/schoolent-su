@@ -72,6 +72,26 @@ export async function deleteStaleUpdateAttachments(env, content) {
   await deleteStaleObjects(env, "updates/", usedKeys);
 }
 
+export async function needsContentStorageMigration(env, content) {
+  if (Array.isArray(content?.notices) && content.notices.length) {
+    return true;
+  }
+
+  if (!hasBucket(env)) {
+    return false;
+  }
+
+  let hasInlineLongText = false;
+  await visitLongTextFields(content, async (holder, key) => {
+    const value = holder[key];
+    if (isInlineLocalizedText(value)) {
+      hasInlineLongText = true;
+    }
+  });
+
+  return hasInlineLongText;
+}
+
 async function hydrateLocalizedText(env, value, path) {
   if (!isTextMarker(value)) {
     return value;
@@ -227,6 +247,14 @@ async function visitPath(current, segments, actualPath, callback) {
 
 function isTextMarker(value) {
   return Boolean(value && typeof value === "object" && value[TEXT_MARKER]);
+}
+
+function isInlineLocalizedText(value) {
+  if (!value || typeof value !== "object" || isTextMarker(value)) {
+    return false;
+  }
+
+  return ["zh", "en"].some((lang) => typeof value[lang] === "string" && value[lang].trim());
 }
 
 function clone(value) {

@@ -476,8 +476,8 @@ function renderEditor() {
       </section>
 
       <section class="editor-section">
-        <h3>Updates 富文本发布</h3>
-        <p class="help-copy">新的 Updates 会优先显示在 /updates/ 页面。正文支持基础 HTML 富文本，附件会上传到 R2 并写入当前 Update。</p>
+        <h3>公告 / Updates 富文本发布</h3>
+        <p class="help-copy">公告和 Updates 现在使用同一个发布列表；需要置顶通知感的内容，把标签写成 NOTICE。正文会进入 R2，附件也会上传到 R2。</p>
         <div class="editor-grid">
           ${localizedFields("模块标题", "updates.heading", state.content.updates.heading)}
         </div>
@@ -496,7 +496,7 @@ function renderEditor() {
                     <div class="editor-grid">
                       ${localizedFields("标题", `updates.items[${index}].title`, item.title)}
                       ${inputField("日期时间", `updates.items[${index}].date`, item.date)}
-                      ${inputField("标签", `updates.items[${index}].tag`, item.tag)}
+                      ${inputField("标签（公告可填 NOTICE）", `updates.items[${index}].tag`, item.tag)}
                       ${localizedFields("摘要", `updates.items[${index}].summary`, item.summary, true)}
                     </div>
                     ${richTextFields("正文", `updates.items[${index}].body`, item.body)}
@@ -511,7 +511,7 @@ function renderEditor() {
             .join("")}
         </div>
         <div class="row-actions">
-          <button class="button button-secondary" type="button" data-action="add" data-array-path="updates.items">新增 Update</button>
+          <button class="button button-secondary" type="button" data-action="add" data-array-path="updates.items">新增公告 / Update</button>
         </div>
       </section>
 
@@ -666,6 +666,10 @@ function renderEditor() {
       </section>
     </div>
   `;
+
+  dom.editorPanel
+    .querySelectorAll('[data-array-path="notices"]')
+    .forEach((node) => node.closest(".editor-section")?.remove());
 
   dom.editorPanel
     .querySelectorAll('[data-array-path="organization.concurrentRoles"]')
