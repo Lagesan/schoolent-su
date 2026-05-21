@@ -512,7 +512,7 @@ function showSchoolentDeclaration(event) {
       <button class="declaration-close" type="button" aria-label="Close">×</button>
       <p class="section-label">SCHOOLENT DECLARATION</p>
       <h3>Schoolent</h3>
-      <p>Schoolent 是由KZID的Schoolent开发组创立和运维的标识，旨在为同学们提供学习资源分享、社交交流和项目实践的平台，与KSC完全独立，门户网站的活动和管理与本标识无关。</p>
+      <p style="white-space: normal; word-break: break-word; overflow-wrap: break-word;">Schoolent 是由KZID的Schoolent开发组创立和运维的标识，旨在为同学们提供学习资源分享、社交交流和项目实践的平台，与KSC完全独立，门户网站的活动和管理与本标识无关。</p>
     </div>
   `;
   document.body.append(popover);
