@@ -465,6 +465,17 @@ select {
   background: var(--panel);
 }
 
+.stream-list-link {
+  display: block;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.stream-list-link:hover {
+  border-color: var(--line-strong);
+  background: var(--bg-soft);
+  transform: translateY(-1px);
+}
+
 .stream-details {
   display: block;
 }
@@ -571,6 +582,110 @@ select {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.stream-attachment-count {
+  display: inline-block;
+  margin-top: 14px;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.detail-card {
+  padding: clamp(24px, 5vw, 48px);
+}
+
+.detail-rich {
+  font-size: 1rem;
+}
+
+.detail-copy {
+  font-size: 1.05rem;
+}
+
+.attachment-gallery {
+  display: grid;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.attachment-gallery h3 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
+.attachment-card {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.42fr) 1fr;
+  gap: 18px;
+  align-items: stretch;
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+}
+
+.attachment-preview,
+.attachment-audio,
+.attachment-file-icon {
+  width: 100%;
+  min-height: 150px;
+  border: 1px solid var(--line);
+  background: #000;
+}
+
+.attachment-preview {
+  object-fit: contain;
+  max-height: 420px;
+}
+
+.attachment-audio,
+.attachment-file-icon {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.attachment-audio audio {
+  width: 100%;
+}
+
+.attachment-file-icon {
+  color: var(--text-faint);
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+}
+
+.attachment-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.attachment-copy strong {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+
+.attachment-copy span {
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+
+.attachment-open {
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
 }
 
 .timeline-link {
@@ -959,10 +1074,46 @@ select {
   border-right: 1px solid var(--line);
 }
 
+.footer-brand-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(100%, 280px);
+  aspect-ratio: 1 / 1;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  isolation: isolate;
+}
+
 .footer-brand-image {
   width: min(100%, 240px);
   aspect-ratio: 1 / 1;
   object-fit: contain;
+  transition: transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 420ms ease;
+}
+
+.footer-brand-glow {
+  position: absolute;
+  inset: 16%;
+  z-index: -1;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 62%);
+  opacity: 0;
+  transform: scale(0.72);
+  transition: opacity 420ms ease, transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.footer-brand-button:hover .footer-brand-image,
+.footer-brand-button:focus-visible .footer-brand-image {
+  transform: scale(1.045) translateY(-2px);
+  filter: brightness(1.12);
+}
+
+.footer-brand-button:hover .footer-brand-glow,
+.footer-brand-button:focus-visible .footer-brand-glow {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .footer-brand-copy {
@@ -999,6 +1150,65 @@ select {
 .social-icon {
   display: none;
   /* 移除多余的图标框，保持极简文字 */
+}
+
+.declaration-popover {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease, background 220ms ease;
+}
+
+.declaration-popover.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.declaration-card {
+  position: relative;
+  width: min(520px, 100%);
+  padding: 32px;
+  border: 1px solid var(--line-strong);
+  background: rgba(5, 5, 5, 0.96);
+  transform: translateY(16px) scale(0.96);
+  filter: blur(6px);
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 260ms ease;
+}
+
+.declaration-popover.is-visible .declaration-card {
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+.declaration-card h3 {
+  margin: 12px 0;
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+.declaration-card p:last-child {
+  margin-bottom: 0;
+  color: var(--text-muted);
+}
+
+.declaration-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
 }
 
 /* 响应式适配 */
@@ -1214,9 +1424,23 @@ body.is-app-shell .detail-hero {
   padding: 0 0 20px;
 }
 
-body.is-app-shell .stream-card {
-  padding: 22px 18px;
-}
+  body.is-app-shell .stream-card {
+    padding: 22px 18px;
+  }
+
+  body.is-app-shell .stream-summary {
+    align-items: flex-start;
+  }
+
+  body.is-app-shell .attachment-card {
+    grid-template-columns: 1fr;
+  }
+
+  body.is-app-shell .attachment-preview,
+  body.is-app-shell .attachment-audio,
+  body.is-app-shell .attachment-file-icon {
+    min-height: 180px;
+  }
 
 body.is-app-shell .app-mode-hub {
   gap: 10px;
@@ -1299,5 +1523,14 @@ body.is-app-shell .tag {
 
   body.is-app-shell .brand h1 {
     font-size: 0.9rem;
+  }
+
+  .stream-summary,
+  .attachment-card {
+    grid-template-columns: 1fr;
+  }
+
+  .stream-summary {
+    flex-direction: column;
   }
 }

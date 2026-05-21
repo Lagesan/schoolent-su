@@ -148,14 +148,19 @@ function render() {
   document.title = `${shortName} | ${pageType === "proposals" ? lang.common.proposals : lang.common.updates}`;
 
   setText(dom.brandName, shortName);
-  setText(dom.badge, pageType === "proposals" ? lang.common.proposalsBadge : lang.common.updatesBadge);
-  setText(dom.title, pageUi.title);
-  setText(dom.subtitle, pageUi.subtitle);
   setText(dom.updatedAt, `${lang.common.updatedAt}: ${formatDate(state.meta?.updatedAt, true)}`);
 
   if (pageType === "proposals") {
+    setText(dom.badge, lang.common.proposalsBadge);
+    setText(dom.title, pageUi.title);
+    setText(dom.subtitle, pageUi.subtitle);
     renderProposals(content.initiatives?.items, pageUi, lang);
+  } else if (pageType === "update-detail") {
+    renderDetailPage(content, lang.updates, lang);
   } else {
+    setText(dom.badge, lang.common.updatesBadge);
+    setText(dom.title, pageUi.title);
+    setText(dom.subtitle, pageUi.subtitle);
     renderUpdates(content, pageUi, lang);
   }
 }
@@ -177,7 +182,8 @@ function renderUpdates(content, pageUi, lang) {
             date: item.date,
             title: item.title,
             summary: item.summary,
-            extra: pick(item.location)
+            extra: pick(item.location),
+            href: detailHref("activity", item.id)
           })
         }))
     )
@@ -203,12 +209,11 @@ function renderUpdates(content, pageUi, lang) {
 function renderUpdateStreamCard(item, pageUi, index) {
   const attachments = toArray(item.attachments).filter((attachment) => attachment.url);
   const tag = String(item.tag || pageUi.labels.update).toUpperCase();
-  const className = tag === "NOTICE" ? "stream-card stream-card-rich stream-card-notice stream-details" : "stream-card stream-card-rich stream-details";
-  const open = state.isAppShell ? "" : " open";
+  const className = tag === "NOTICE" ? "stream-card stream-card-rich stream-card-notice stream-list-link" : "stream-card stream-card-rich stream-list-link";
 
   return `
-    <details class="${className}" id="update-${index}"${open}>
-      <summary class="stream-summary">
+    <a class="${className}" id="update-${index}" href="${escapeAttribute(detailHref("update", item.id))}">
+      <span class="stream-summary">
         <span class="stream-summary-main">
           <span class="stream-meta">
             <span class="tag">${escapeHtml(tag === "NOTICE" ? pageUi.labels.notice : item.tag || pageUi.labels.update)}</span>
@@ -218,30 +223,17 @@ function renderUpdateStreamCard(item, pageUi, index) {
           ${pick(item.summary) ? `<span class="stream-copy">${escapeHtml(pick(item.summary))}</span>` : ""}
         </span>
         <span class="stream-open-label">${escapeHtml(pageUi.labels.read)}</span>
-      </summary>
-      <div class="stream-detail-body">
-        <div class="stream-rich">${sanitizeRichHtml(pick(item.body) || escapeHtml(pick(item.summary)))}</div>
-        ${attachments.length ? `
-          <div class="stream-attachments" aria-label="Attachments">
-            ${attachments
-              .map(
-                (attachment) => `
-                  <a href="${escapeAttribute(attachment.url)}" target="_blank" rel="noreferrer">
-                    ${escapeHtml(pick(attachment.label) || attachment.name || "Attachment")}
-                  </a>
-                `
-              )
-              .join("")}
-          </div>
-        ` : ""}
-      </div>
-    </details>
+      </span>
+      ${attachments.length ? `<span class="stream-attachment-count">${escapeHtml(String(attachments.length))} attachment(s)</span>` : ""}
+    </a>
   `;
 }
 
-function renderSimpleStreamCard({ label, date, title, summary, extra }) {
+function renderSimpleStreamCard({ label, date, title, summary, extra, href = "" }) {
+  const tagName = href ? "a" : "article";
+  const hrefAttribute = href ? ` href="${escapeAttribute(href)}"` : "";
   return `
-    <article class="stream-card">
+    <${tagName} class="stream-card stream-list-link"${hrefAttribute}>
       <div class="stream-meta">
         <span class="tag">${escapeHtml(label)}</span>
         <span>${escapeHtml(formatDate(date))}</span>
@@ -249,8 +241,103 @@ function renderSimpleStreamCard({ label, date, title, summary, extra }) {
       </div>
       <h3>${escapeHtml(pick(title))}</h3>
       <p class="stream-copy">${escapeHtml(pick(summary))}</p>
+    </${tagName}>
+  `;
+}
+
+function renderDetailPage(content, pageUi, lang) {
+  const params = new URLSearchParams(window.location.search);
+  const type = params.get("type") || "update";
+  const id = params.get("id") || "";
+  const item = type === "activity"
+    ? toArray(content.activities?.items).find((entry) => entry.id === id)
+    : toArray(content.updates?.items).find((entry) => entry.id === id);
+
+  if (!item || (type === "update" && !item.published) || (type === "activity" && !item.published)) {
+    setText(dom.badge, pageUi.title.toUpperCase());
+    setText(dom.title, lang.common.noItems);
+    setText(dom.subtitle, lang.common.emptyHint);
+    dom.stream.innerHTML = emptyState(lang.common.noItems);
+    return;
+  }
+
+  const label = type === "activity" ? pageUi.labels.activity : String(item.tag || pageUi.labels.update).toUpperCase();
+  setText(dom.badge, label);
+  setText(dom.title, pick(item.title));
+  setText(dom.subtitle, type === "activity" ? pick(item.summary) : pick(item.summary) || stripHtml(pick(item.body)));
+
+  dom.stream.innerHTML = type === "activity" ? renderActivityDetail(item, pageUi) : renderUpdateDetail(item, pageUi);
+}
+
+function renderUpdateDetail(item, pageUi) {
+  const attachments = toArray(item.attachments).filter((attachment) => attachment.url);
+  return `
+    <article class="stream-card detail-card">
+      <div class="stream-meta">
+        <span class="tag">${escapeHtml(item.tag || pageUi.labels.update)}</span>
+        <span>${escapeHtml(formatDate(item.date, true))}</span>
+      </div>
+      <div class="stream-rich detail-rich">${sanitizeRichHtml(pick(item.body) || escapeHtml(pick(item.summary)))}</div>
+      ${attachments.length ? renderAttachments(attachments) : ""}
     </article>
   `;
+}
+
+function renderActivityDetail(item, pageUi) {
+  return `
+    <article class="stream-card detail-card">
+      <div class="stream-meta">
+        <span class="tag">${escapeHtml(pageUi.labels.activity)}</span>
+        <span>${escapeHtml(formatDate(item.date, true))}</span>
+        ${pick(item.location) ? `<span>${escapeHtml(pick(item.location))}</span>` : ""}
+        ${item.status ? `<span>${escapeHtml(item.status)}</span>` : ""}
+      </div>
+      <p class="stream-copy detail-copy">${escapeHtml(pick(item.summary))}</p>
+    </article>
+  `;
+}
+
+function renderAttachments(attachments) {
+  return `
+    <section class="attachment-gallery" aria-label="Attachments">
+      <h3>Attachments</h3>
+      ${attachments.map(renderAttachment).join("")}
+    </section>
+  `;
+}
+
+function renderAttachment(attachment) {
+  const label = pick(attachment.label) || attachment.name || "Attachment";
+  const url = safeAttachmentUrl(attachment.url);
+  if (!url) {
+    return "";
+  }
+
+  const type = String(attachment.type || "").toLowerCase();
+  const preview = renderAttachmentPreview(url, type, label);
+  return `
+    <article class="attachment-card">
+      ${preview}
+      <div class="attachment-copy">
+        <strong>${escapeHtml(label)}</strong>
+        <span>${escapeHtml(type || "file")}${attachment.size ? ` / ${escapeHtml(formatBytes(attachment.size))}` : ""}</span>
+        <a class="attachment-open" href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">Open file</a>
+      </div>
+    </article>
+  `;
+}
+
+function renderAttachmentPreview(url, type, label) {
+  if (type.startsWith("image/")) {
+    return `<img class="attachment-preview" src="${escapeAttribute(url)}" alt="${escapeAttribute(label)}" loading="lazy" />`;
+  }
+  if (type.startsWith("video/")) {
+    return `<video class="attachment-preview" src="${escapeAttribute(url)}" controls preload="metadata"></video>`;
+  }
+  if (type.startsWith("audio/")) {
+    return `<div class="attachment-audio"><audio src="${escapeAttribute(url)}" controls preload="metadata"></audio></div>`;
+  }
+  return `<div class="attachment-file-icon" aria-hidden="true">FILE</div>`;
 }
 
 function renderProposals(items, pageUi, lang) {
@@ -297,6 +384,42 @@ function detectAppShell() {
   return params.get("app") === "1" || params.get("mode") === "app" || typeof window.Android !== "undefined";
 }
 
+function detailHref(type, id) {
+  const params = new URLSearchParams({
+    type,
+    id: String(id || "")
+  });
+  if (state.isAppShell) {
+    params.set("app", "1");
+  }
+  return `/updates/item/?${params.toString()}`;
+}
+
+function safeAttachmentUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  if (raw.startsWith("/api/assets/")) {
+    return raw;
+  }
+
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.origin === window.location.origin && url.pathname.startsWith("/api/assets/")) {
+      return `${url.pathname}${url.search}`;
+    }
+    if (url.protocol === "https:") {
+      return url.href;
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
 function setText(node, value) {
   if (node) {
     node.textContent = String(value || "");
@@ -328,6 +451,23 @@ function formatDate(value, includeTime = false) {
   const locale = state.lang === "zh" ? "zh-CN" : "en-US";
   const options = includeTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" };
   return new Intl.DateTimeFormat(locale, options).format(date);
+}
+
+function formatBytes(value) {
+  const size = Number(value || 0);
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function stripHtml(value) {
+  const element = document.createElement("div");
+  element.innerHTML = String(value || "");
+  return element.textContent || element.innerText || "";
 }
 
 function escapeHtml(value) {

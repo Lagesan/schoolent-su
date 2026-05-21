@@ -12,6 +12,7 @@ function departmentTemplate() {
 
 function activityTemplate() {
   return {
+    id: "",
     title: localized("", ""),
     date: new Date().toISOString(),
     location: localized("", ""),
@@ -34,6 +35,7 @@ function updateAttachmentTemplate() {
 
 function updateTemplate() {
   return {
+    id: "",
     title: localized("", ""),
     date: new Date().toISOString(),
     tag: "UPDATE",
@@ -248,6 +250,38 @@ function normalizeString(value, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
 
+function createContentId(prefix, value, index = 0) {
+  const existing = normalizeString(value?.id, "");
+  if (existing) {
+    return safeId(existing);
+  }
+
+  const seed = [
+    prefix,
+    normalizeString(value?.date, ""),
+    normalizeString(value?.tag || value?.status, ""),
+    normalizeString(value?.title?.zh || value?.title?.en || value?.label?.zh || value?.label?.en, ""),
+    index
+  ].join("|");
+
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+
+  return `${prefix}-${hash.toString(36)}`;
+}
+
+function safeId(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80) || "item";
+}
+
 function normalizeLocalized(value, fallback) {
   return {
     zh: normalizeString(value?.zh, fallback.zh),
@@ -280,8 +314,9 @@ function normalizeDepartment(value, fallback) {
   };
 }
 
-function normalizeActivity(value, fallback) {
+function normalizeActivity(value, fallback, index = 0) {
   return {
+    id: createContentId("activity", value, index),
     title: normalizeLocalized(value?.title, fallback.title),
     date: normalizeString(value?.date, fallback.date),
     location: normalizeLocalized(value?.location, fallback.location),
@@ -321,8 +356,9 @@ function normalizeUpdateAttachment(value, fallback) {
   };
 }
 
-function normalizeUpdate(value, fallback) {
+function normalizeUpdate(value, fallback, index = 0) {
   return {
+    id: createContentId("update", value, index),
     title: normalizeLocalized(value?.title, fallback.title),
     date: normalizeString(value?.date, fallback.date),
     tag: normalizeString(value?.tag, fallback.tag),
@@ -344,7 +380,7 @@ function normalizeMergedUpdates(value, fallback) {
 
   return updateItems
     .concat(migratedNotices)
-    .map((item) => normalizeUpdate(item, updateTemplate()));
+    .map((item, index) => normalizeUpdate(item, updateTemplate(), index));
 }
 
 function normalizePersonRole(value, fallback) {
@@ -484,8 +520,8 @@ export function normalizeContent(value = {}) {
       heading: normalizeLocalized(value.activities?.heading, fallback.activities.heading),
       intro: normalizeLocalized(value.activities?.intro, fallback.activities.intro),
       items: Array.isArray(value.activities?.items)
-        ? value.activities.items.map((item) => normalizeActivity(item, activityTemplate()))
-        : fallback.activities.items.map((item) => normalizeActivity(item, activityTemplate()))
+        ? value.activities.items.map((item, index) => normalizeActivity(item, activityTemplate(), index))
+        : fallback.activities.items.map((item, index) => normalizeActivity(item, activityTemplate(), index))
     },
     updates: {
       heading: normalizeLocalized(value.updates?.heading, fallback.updates.heading),

@@ -665,7 +665,7 @@ function renderActivities(content) {
       title: item.title,
       meta: item.tag || "UPDATE",
       summary: item.summary,
-      href: `/updates/${state.isAppShell ? "?app=1" : ""}`
+      href: detailHref("update", item.id)
     }));
   const activityItems = toArray(content?.activities?.items)
     .filter((item) => item.published)
@@ -675,7 +675,7 @@ function renderActivities(content) {
       title: item.title,
       meta: [pick(item.location), item.status].filter(Boolean).join(" / "),
       summary: item.summary,
-      href: `/updates/${state.isAppShell ? "?app=1" : ""}`
+      href: detailHref("activity", item.id)
     }));
   const published = updateItems
     .concat(activityItems)
@@ -863,7 +863,10 @@ function renderFooter(content, meta, language) {
   dom.siteFooter.innerHTML = `
     <div class="footer-brand">
       <div class="footer-brand-tile">
-        <img class="footer-brand-image" src="/assets/schoolent-icon.png" alt="Schoolent" />
+        <button class="footer-brand-button" type="button" data-schoolent-declaration aria-label="Show Schoolent declaration">
+          <img class="footer-brand-image" src="/assets/schoolent-icon.png" alt="Schoolent" />
+          <span class="footer-brand-glow" aria-hidden="true"></span>
+        </button>
       </div>
       <div class="footer-brand-copy">
         ${statement ? `<p>${escapeHtml(statement)}</p>` : ""}
@@ -887,6 +890,8 @@ function renderFooter(content, meta, language) {
       </div>
     </div>
   `;
+
+  dom.siteFooter.querySelector("[data-schoolent-declaration]")?.addEventListener("click", showSchoolentDeclaration);
 }
 
 function resolveSocialIcon(icon) {
@@ -930,6 +935,34 @@ function sharePortal() {
   if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(url).catch(() => {});
   }
+}
+
+function showSchoolentDeclaration() {
+  const existing = document.querySelector(".declaration-popover");
+  existing?.remove();
+
+  const popover = document.createElement("div");
+  popover.className = "declaration-popover";
+  popover.innerHTML = `
+    <div class="declaration-card" role="dialog" aria-modal="true" aria-label="Schoolent declaration">
+      <button class="declaration-close" type="button" aria-label="Close">×</button>
+      <p class="section-label">SCHOOLENT DECLARATION</p>
+      <h3>Schoolent</h3>
+      <p>这里将显示你后续硬编码的声明文本。</p>
+    </div>
+  `;
+  document.body.append(popover);
+  requestAnimationFrame(() => popover.classList.add("is-visible"));
+
+  const close = () => {
+    popover.classList.remove("is-visible");
+    window.setTimeout(() => popover.remove(), 220);
+  };
+  popover.addEventListener("click", (event) => {
+    if (event.target === popover || event.target.closest(".declaration-close")) {
+      close();
+    }
+  });
 }
 
 function hasNativeBridge() {
@@ -990,6 +1023,17 @@ function stripHtml(value) {
   const element = document.createElement("div");
   element.innerHTML = String(value || "");
   return element.textContent || element.innerText || "";
+}
+
+function detailHref(type, id) {
+  const params = new URLSearchParams({
+    type,
+    id: String(id || "")
+  });
+  if (state.isAppShell) {
+    params.set("app", "1");
+  }
+  return `/updates/item/?${params.toString()}`;
 }
 
 function emptyState() {
