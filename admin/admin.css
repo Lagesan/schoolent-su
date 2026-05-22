@@ -244,6 +244,50 @@
   margin-bottom: 6px;
 }
 
+.preview-node span {
+  display: block;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.rotation-sort-list {
+  display: grid;
+  gap: 12px;
+}
+
+.rotation-sort-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.rotation-sort-card[draggable="true"] {
+  cursor: grab;
+}
+
+.rotation-sort-card strong,
+.rotation-sort-card span {
+  display: block;
+}
+
+.rotation-sort-card span {
+  color: var(--text-faint);
+  font-size: 0.84rem;
+}
+
+.drag-handle {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .icon-chip {
   display: inline-flex;
   align-items: center;
@@ -325,6 +369,10 @@
   .preview-grid,
   .rich-grid,
   .doc-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rotation-sort-card {
     grid-template-columns: 1fr;
   }
 }

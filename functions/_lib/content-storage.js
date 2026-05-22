@@ -12,6 +12,7 @@ const LONG_TEXT_FIELDS = [
   ["organization", "presidentRotation", "note"],
   ["organization", "presidentRotation", "members", "*", "note"],
   ["organization", "people", "*", "note"],
+  ["organization", "people", "*", "rotation", "note"],
   ["organization", "people", "*", "roles", "*", "scope"],
   ["organization", "departments", "*", "scope"],
   ["activities", "intro"],

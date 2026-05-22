@@ -28,28 +28,24 @@ const factories = {
     label: { zh: "", en: "" },
     message: { zh: "", en: "" }
   }),
-  "organization.departments": () => ({
-    title: { zh: "", en: "" },
-    scope: { zh: "", en: "" },
-    status: "ACTIVE"
-  }),
   "organization.people": () => ({
+    id: createLocalId("person"),
     name: { zh: "", en: "" },
     roles: [],
     status: "ACTIVE",
-    note: { zh: "", en: "" }
+    note: { zh: "", en: "" },
+    rotation: {
+      enabled: false,
+      order: 0,
+      status: "UPCOMING",
+      period: { zh: "", en: "" },
+      note: { zh: "", en: "" }
+    }
   }),
   "person.roles": () => ({
     title: { zh: "", en: "" },
     scope: { zh: "", en: "" },
     status: "ACTIVE"
-  }),
-  "organization.presidentRotation.members": () => ({
-    person: { zh: "", en: "" },
-    baseRole: { zh: "", en: "" },
-    order: 1,
-    status: "UPCOMING",
-    note: { zh: "", en: "" }
   }),
   "activities.items": () => ({
     title: { zh: "", en: "" },
@@ -97,6 +93,9 @@ dom.editorPanel.addEventListener("input", handleFieldInput);
 dom.editorPanel.addEventListener("change", handleFieldInput);
 dom.editorPanel.addEventListener("click", handleEditorClick);
 dom.editorPanel.addEventListener("mousedown", handleEditorMouseDown);
+dom.editorPanel.addEventListener("dragstart", handleRotationDragStart);
+dom.editorPanel.addEventListener("dragover", handleRotationDragOver);
+dom.editorPanel.addEventListener("drop", handleRotationDrop);
 window.addEventListener("beforeunload", handleBeforeUnload);
 
 init();
@@ -168,23 +167,17 @@ function renderEditor() {
   dom.loginPanel.hidden = true;
   dom.editorPanel.hidden = false;
 
+  preparePeopleModel();
   const leadership = state.content.organization.leadership;
   const presidentRotation = state.content.organization.presidentRotation || {
-    heading: { zh: "", en: "" },
+    heading: { zh: "会长轮换顺序", en: "President rotation order" },
     currentPeriod: { zh: "", en: "" },
     currentPresident: { zh: "", en: "" },
     note: { zh: "", en: "" },
     members: []
   };
-  const monthlyPresident = state.content.organization.monthlyPresident || {
-    person: { zh: "", en: "" },
-    period: { zh: "", en: "" },
-    note: { zh: "", en: "" }
-  };
-  const rotationMembers = presidentRotation.members || [];
-  const concurrentRoles = [];
   const people = state.content.organization.people || [];
-  const departments = state.content.organization.departments;
+  const rotationPeople = getRotationPeople();
 
   dom.editorPanel.innerHTML = `
     <div class="editor-layout">
@@ -263,6 +256,7 @@ function renderEditor() {
 
         <div class="editor-card">
           <h4>核心节点</h4>
+          <p class="help-copy">这里只保留组织顶部说明。具体谁做什么，全部到下面的人员名册里维护。</p>
           <div class="editor-grid">
             ${localizedFields("核心节点名称", "organization.leadership.title", leadership.title)}
             ${localizedFields("负责范围", "organization.leadership.scope", leadership.scope, true)}
@@ -271,24 +265,14 @@ function renderEditor() {
         </div>
 
         <div class="editor-card">
-          <h4>当月轮值主席</h4>
-          <p class="help-copy">这里展示当前月份实际由谁轮值担任会长；后续月份变化时，只改这一块即可。</p>
-          <div class="editor-grid">
-            ${localizedFields("轮值主席姓名", "organization.monthlyPresident.person", monthlyPresident.person)}
-            ${localizedFields("轮值周期", "organization.monthlyPresident.period", monthlyPresident.period)}
-            ${localizedFields("补充说明", "organization.monthlyPresident.note", monthlyPresident.note, true)}
-          </div>
-        </div>
-
-        <div class="editor-card">
-          <h4>人员与职位</h4>
-          <p class="help-copy">以人为本：先添加人员，再给这个人分配一个或多个职位。固定岗位定义仍在下方维护。</p>
+          <h4>人员名册</h4>
+          <p class="help-copy">现在只维护这一批人。长期职务写在人员下面；需要参与会长轮换，就勾选“加入轮换”，再到下方拖动排序。</p>
           <div class="stack-list">
             ${people
               .map((person, personIndex) =>
                 listItem({
                   title: pickLocal(person.name),
-                  meta: `${person.status} / ${person.roles?.length || 0} role(s)`,
+                  meta: `${person.status} / ${person.roles?.length || 0} role(s)${person.rotation?.enabled ? " / 轮换" : ""}`,
                   body: `
                     <div class="list-body">
                       <div class="editor-grid">
@@ -296,6 +280,17 @@ function renderEditor() {
                         ${inputField("人员状态", `organization.people[${personIndex}].status`, person.status)}
                         ${localizedFields("人员说明", `organization.people[${personIndex}].note`, person.note, true)}
                       </div>
+                      <div class="checkbox-row">
+                        <input id="rotation-enabled-${personIndex}" type="checkbox" data-action="toggle-rotation" data-person-index="${personIndex}" ${person.rotation?.enabled ? "checked" : ""} />
+                        <label for="rotation-enabled-${personIndex}">加入会长轮换顺序</label>
+                      </div>
+                      ${person.rotation?.enabled ? `
+                        <div class="editor-grid">
+                          ${inputField("轮换标注（CURRENT / UPCOMING 等）", `organization.people[${personIndex}].rotation.status`, person.rotation.status)}
+                          ${localizedFields("轮值周期", `organization.people[${personIndex}].rotation.period`, person.rotation.period)}
+                          ${localizedFields("轮换补充说明", `organization.people[${personIndex}].rotation.note`, person.rotation.note, true)}
+                        </div>
+                      ` : ""}
                       <div class="stack-list">
                         ${(person.roles || [])
                           .map((role, roleIndex) => `
@@ -328,120 +323,54 @@ function renderEditor() {
         </div>
 
         <div class="editor-card">
-          <h4>会长轮换顺序</h4>
-          <p class="help-copy">固定岗位继续在部门节点里维护；这里专门展示“会长由谁按顺序轮换”。你可以标记当前轮值人，也可以提前排好顺序。</p>
+          <h4>会长轮换排序</h4>
+          <p class="help-copy">拖动人员卡片即可排序。也可以用上移/下移按钮，当前轮值人把标注写成 CURRENT。</p>
           <div class="editor-grid">
             ${localizedFields("轮换区标题", "organization.presidentRotation.heading", presidentRotation.heading)}
-            ${localizedFields("当前轮值周期", "organization.presidentRotation.currentPeriod", presidentRotation.currentPeriod)}
-            ${localizedFields("当前轮值会长", "organization.presidentRotation.currentPresident", presidentRotation.currentPresident)}
             ${localizedFields("轮换说明", "organization.presidentRotation.note", presidentRotation.note, true)}
           </div>
-          <div class="stack-list">
-            ${rotationMembers
-              .map((item, index) =>
-                listItem({
-                  title: `${pickLocal(item.person) || "未命名"} / #${Number(item.order || 0)}`,
-                  meta: `${item.status} / ${pickLocal(item.baseRole) || "未填写固定岗位"}`,
-                  body: `
-                    <div class="list-body">
-                      <div class="editor-grid">
-                        ${localizedFields("人员姓名", `organization.presidentRotation.members[${index}].person`, item.person)}
-                        ${localizedFields("固定岗位", `organization.presidentRotation.members[${index}].baseRole`, item.baseRole)}
-                        ${numberField("轮换顺位", `organization.presidentRotation.members[${index}].order`, item.order)}
-                        ${inputField("状态标签", `organization.presidentRotation.members[${index}].status`, item.status)}
-                        ${localizedFields("补充说明", `organization.presidentRotation.members[${index}].note`, item.note, true)}
+          <div class="rotation-sort-list" data-rotation-sort-list>
+            ${rotationPeople.length
+              ? rotationPeople
+                .map((person, rotationIndex) => {
+                  const personIndex = people.indexOf(person);
+                  return `
+                    <article class="rotation-sort-card" draggable="true" data-person-index="${personIndex}">
+                      <span class="drag-handle" aria-hidden="true">Drag</span>
+                      <div>
+                        <strong>${escapeHtml(pickLocal(person.name) || "未命名")}</strong>
+                        <span>${escapeHtml(person.rotation?.status || "UPCOMING")} / #${rotationIndex + 1}</span>
                       </div>
                       <div class="row-actions">
-                        <button class="button button-danger" type="button" data-action="remove" data-array-path="organization.presidentRotation.members" data-index="${index}">删除轮换成员</button>
+                        <button class="button button-secondary" type="button" data-action="move-rotation" data-person-index="${personIndex}" data-direction="-1">上移</button>
+                        <button class="button button-secondary" type="button" data-action="move-rotation" data-person-index="${personIndex}" data-direction="1">下移</button>
+                        <button class="button button-danger" type="button" data-action="toggle-rotation-off" data-person-index="${personIndex}">移出轮换</button>
                       </div>
-                    </div>
-                  `
+                    </article>
+                  `;
                 })
-              )
-              .join("")}
-          </div>
-          <div class="row-actions">
-            <button class="button button-secondary" type="button" data-action="add" data-array-path="organization.presidentRotation.members">新增轮换成员</button>
-          </div>
-        </div>
-
-        <div class="editor-card">
-          <h4>兼任与临时安排</h4>
-          <p class="help-copy">这是旧规则的兼容区。若仍有“某人短期兼任某部长”之类安排，继续放这里；如果主要是会长轮换，请优先维护上面的轮换顺序。</p>
-          <div class="stack-list">
-            ${concurrentRoles
-              .map((item, index) =>
-                listItem({
-                  title: `${pickLocal(item.person) || "未命名"} / ${pickLocal(item.concurrentRole) || "未填写兼任职务"}`,
-                  meta: `${pickLocal(item.period) || "未填写周期"} / ${item.status}`,
-                  body: `
-                    <div class="list-body">
-                      <div class="editor-grid">
-                        ${localizedFields("人员姓名", `organization.concurrentRoles[${index}].person`, item.person)}
-                        ${localizedFields("原本职务", `organization.concurrentRoles[${index}].primaryRole`, item.primaryRole)}
-                        ${localizedFields("兼任职务", `organization.concurrentRoles[${index}].concurrentRole`, item.concurrentRole)}
-                        ${localizedFields("适用周期", `organization.concurrentRoles[${index}].period`, item.period)}
-                        ${inputField("状态标签", `organization.concurrentRoles[${index}].status`, item.status)}
-                        ${localizedFields("补充说明", `organization.concurrentRoles[${index}].note`, item.note, true)}
-                      </div>
-                      <div class="row-actions">
-                        <button class="button button-danger" type="button" data-action="remove" data-array-path="organization.concurrentRoles" data-index="${index}">删除这条安排</button>
-                      </div>
-                    </div>
-                  `
-                })
-              )
-              .join("")}
-          </div>
-          <div class="row-actions">
-            <button class="button button-secondary" type="button" data-action="add" data-array-path="organization.concurrentRoles">新增兼任安排</button>
+                .join("")
+              : `<p class="help-copy">还没有人加入轮换。先在人员名册里勾选“加入会长轮换顺序”。</p>`}
           </div>
         </div>
 
         <div class="editor-card">
           <h4>关系图预览</h4>
           <div class="preview-grid">
-            <div class="preview-node">
-              <strong>${escapeHtml(pickLocal(leadership.title))}</strong>
-              <span>${escapeHtml(pickLocal(leadership.scope))}</span>
-            </div>
-            ${departments
-              .map(
-                (department) => `
-                  <div class="preview-node">
-                    <strong>${escapeHtml(pickLocal(department.title))}</strong>
-                    <span>${escapeHtml(pickLocal(department.scope))}</span>
-                  </div>
-                `
-              )
-              .join("")}
+            ${people.length
+              ? people
+                .map(
+                  (person) => `
+                    <div class="preview-node">
+                      <strong>${escapeHtml(pickLocal(person.name) || "未命名")}</strong>
+                      <span>${escapeHtml((person.roles || []).map((role) => pickLocal(role.title)).filter(Boolean).join(" / ") || person.status || "ACTIVE")}</span>
+                      ${person.rotation?.enabled ? `<span>${escapeHtml(`轮换 #${person.rotation.order || ""} ${person.rotation.status || ""}`)}</span>` : ""}
+                    </div>
+                  `
+                )
+                .join("")
+              : `<p class="help-copy">新增人员后这里会出现预览。</p>`}
           </div>
-        </div>
-
-        <div class="stack-list">
-          ${departments
-            .map((department, index) =>
-              listItem({
-                title: pickLocal(department.title),
-                meta: department.status,
-                body: `
-                  <div class="list-body">
-                    <div class="editor-grid">
-                      ${localizedFields("部门名称", `organization.departments[${index}].title`, department.title)}
-                      ${localizedFields("负责范围", `organization.departments[${index}].scope`, department.scope, true)}
-                      ${inputField("状态标签", `organization.departments[${index}].status`, department.status)}
-                    </div>
-                    <div class="row-actions">
-                      <button class="button button-danger" type="button" data-action="remove" data-array-path="organization.departments" data-index="${index}">删除部门</button>
-                    </div>
-                  </div>
-                `
-              })
-            )
-            .join("")}
-        </div>
-        <div class="row-actions">
-          <button class="button button-secondary" type="button" data-action="add" data-array-path="organization.departments">新增部门节点</button>
         </div>
       </section>
 
@@ -680,9 +609,163 @@ function renderEditor() {
     .querySelectorAll('[data-array-path="notices"]')
     .forEach((node) => node.closest(".editor-section")?.remove());
 
-  dom.editorPanel
-    .querySelectorAll('[data-array-path="organization.concurrentRoles"]')
-    .forEach((node) => node.closest(".editor-card")?.remove());
+}
+
+function preparePeopleModel() {
+  const organization = state.content.organization;
+  organization.people ||= [];
+  organization.presidentRotation ||= {
+    heading: { zh: "会长轮换顺序", en: "President rotation order" },
+    currentPeriod: { zh: "", en: "" },
+    currentPresident: { zh: "", en: "" },
+    note: { zh: "", en: "" },
+    members: []
+  };
+
+  organization.people.forEach((person, index) => {
+    person.id ||= createLocalId("person", index);
+    person.name ||= { zh: "", en: "" };
+    person.roles ||= [];
+    person.status ||= "ACTIVE";
+    person.note ||= { zh: "", en: "" };
+    person.rotation ||= {
+      enabled: false,
+      order: 0,
+      status: "UPCOMING",
+      period: { zh: "", en: "" },
+      note: { zh: "", en: "" }
+    };
+    person.rotation.period ||= { zh: "", en: "" };
+    person.rotation.note ||= { zh: "", en: "" };
+    person.rotation.status ||= "UPCOMING";
+  });
+
+  const legacyMembers = organization.presidentRotation.members || [];
+  legacyMembers.forEach((member) => {
+    if (!pickLocal(member.person)) {
+      return;
+    }
+
+    let person = organization.people.find((item) => sameLocalName(item.name, member.person));
+    if (!person) {
+      person = factories["organization.people"]();
+      person.name = member.person;
+      organization.people.push(person);
+    }
+
+    person.rotation.enabled = true;
+    person.rotation.order = Number(member.order || person.rotation.order || getRotationPeople().length + 1);
+    person.rotation.status = member.status || person.rotation.status || "UPCOMING";
+    person.rotation.note = member.note || person.rotation.note || { zh: "", en: "" };
+    if (member.baseRole && pickLocal(member.baseRole) && !person.roles.some((role) => sameLocalName(role.title, member.baseRole))) {
+      person.roles.push({
+        title: member.baseRole,
+        scope: { zh: "", en: "" },
+        status: "ACTIVE"
+      });
+    }
+  });
+  organization.presidentRotation.members = [];
+
+  normalizeRotationOrder();
+}
+
+function getRotationPeople() {
+  return (state.content.organization.people || [])
+    .filter((person) => person.rotation?.enabled)
+    .slice()
+    .sort((left, right) => Number(left.rotation?.order || 0) - Number(right.rotation?.order || 0));
+}
+
+function setPersonRotationEnabled(personIndex, enabled) {
+  const person = state.content.organization.people[personIndex];
+  if (!person) {
+    return;
+  }
+
+  person.rotation ||= {
+    enabled: false,
+    order: 0,
+    status: "UPCOMING",
+    period: { zh: "", en: "" },
+    note: { zh: "", en: "" }
+  };
+  person.rotation.enabled = enabled;
+  if (enabled && !person.rotation.order) {
+    person.rotation.order = getRotationPeople().length + 1;
+  }
+  normalizeRotationOrder();
+}
+
+function moveRotationPerson(personIndex, direction) {
+  const people = state.content.organization.people || [];
+  const rotationPeople = getRotationPeople();
+  const person = people[personIndex];
+  const current = rotationPeople.indexOf(person);
+  const next = current + direction;
+  if (current < 0 || next < 0 || next >= rotationPeople.length) {
+    return;
+  }
+
+  const reordered = rotationPeople.slice();
+  reordered.splice(current, 1);
+  reordered.splice(next, 0, person);
+  applyRotationOrder(reordered);
+}
+
+function reorderRotationPeople(fromPersonIndex, toPersonIndex) {
+  if (fromPersonIndex === toPersonIndex) {
+    return;
+  }
+
+  const people = state.content.organization.people || [];
+  const fromPerson = people[fromPersonIndex];
+  const toPerson = people[toPersonIndex];
+  const rotationPeople = getRotationPeople();
+  const from = rotationPeople.indexOf(fromPerson);
+  const to = rotationPeople.indexOf(toPerson);
+  if (from < 0 || to < 0) {
+    return;
+  }
+
+  const reordered = rotationPeople.slice();
+  reordered.splice(from, 1);
+  reordered.splice(to, 0, fromPerson);
+  applyRotationOrder(reordered);
+}
+
+function normalizeRotationOrder() {
+  applyRotationOrder(getRotationPeople());
+}
+
+function applyRotationOrder(rotationPeople) {
+  rotationPeople.forEach((person, index) => {
+    person.rotation.order = index + 1;
+  });
+}
+
+function syncPeopleModelForSave() {
+  preparePeopleModel();
+  const organization = state.content.organization;
+  const rotationPeople = getRotationPeople();
+  const current = rotationPeople.find((person) => String(person.rotation?.status || "").toUpperCase() === "CURRENT");
+  organization.presidentRotation.members = rotationPeople.map((person, index) => ({
+    person: person.name,
+    baseRole: person.roles?.[0]?.title || { zh: "", en: "" },
+    order: index + 1,
+    status: person.rotation?.status || "UPCOMING",
+    note: person.rotation?.note || { zh: "", en: "" }
+  }));
+  organization.presidentRotation.currentPresident = current?.name || { zh: "", en: "" };
+  organization.presidentRotation.currentPeriod = current?.rotation?.period || { zh: "", en: "" };
+  organization.monthlyPresident ||= {
+    person: { zh: "", en: "" },
+    period: { zh: "", en: "" },
+    note: { zh: "", en: "" }
+  };
+  organization.monthlyPresident.person = current?.name || { zh: "", en: "" };
+  organization.monthlyPresident.period = current?.rotation?.period || { zh: "", en: "" };
+  organization.monthlyPresident.note = current?.rotation?.note || { zh: "", en: "" };
 }
 
 async function handleLoginSubmit(event) {
@@ -796,6 +879,29 @@ async function handleEditorClick(event) {
     return;
   }
 
+  if (action === "toggle-rotation") {
+    const personIndex = Number(button.dataset.personIndex);
+    setPersonRotationEnabled(personIndex, button.checked);
+    markDirty();
+    renderEditor();
+    return;
+  }
+
+  if (action === "toggle-rotation-off") {
+    const personIndex = Number(button.dataset.personIndex);
+    setPersonRotationEnabled(personIndex, false);
+    markDirty();
+    renderEditor();
+    return;
+  }
+
+  if (action === "move-rotation") {
+    moveRotationPerson(Number(button.dataset.personIndex), Number(button.dataset.direction));
+    markDirty();
+    renderEditor();
+    return;
+  }
+
   if (action === "remove-attachment") {
     if (!confirmDestructive("确定移除这个附件吗？保存并发布后前台将不再显示它。")) {
       return;
@@ -853,8 +959,40 @@ function handleBeforeUnload(event) {
   event.returnValue = "";
 }
 
+function handleRotationDragStart(event) {
+  const card = event.target.closest(".rotation-sort-card");
+  if (!card) {
+    return;
+  }
+
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", card.dataset.personIndex);
+}
+
+function handleRotationDragOver(event) {
+  if (event.target.closest("[data-rotation-sort-list]")) {
+    event.preventDefault();
+  }
+}
+
+function handleRotationDrop(event) {
+  const targetCard = event.target.closest(".rotation-sort-card");
+  const sortList = event.target.closest("[data-rotation-sort-list]");
+  if (!sortList) {
+    return;
+  }
+
+  event.preventDefault();
+  const fromIndex = Number(event.dataTransfer.getData("text/plain"));
+  const toIndex = targetCard ? Number(targetCard.dataset.personIndex) : fromIndex;
+  reorderRotationPeople(fromIndex, toIndex);
+  markDirty();
+  renderEditor();
+}
+
 async function saveContent() {
   setStatus("正在保存并发布...", "warn");
+  syncPeopleModelForSave();
 
   try {
     const response = await fetch("/api/admin/content", {
@@ -978,7 +1116,7 @@ function renderAdminDocs() {
 
         <article class="doc-card">
           <h4>组织关系图</h4>
-          <p>“人员与职位”用于维护人和岗位；“当月轮值主席”用于当前展示；“会长轮换顺序”用于说明轮换规则。一般只需要改这三块。</p>
+          <p>组织架构以人员名册为中心。先新增人员，再给这个人加长期职务；需要进入会长轮换时勾选“加入轮换”，然后在“会长轮换排序”里拖动排序并把当前轮值人标注为 CURRENT。</p>
         </article>
 
         <article class="doc-card">
@@ -1155,6 +1293,18 @@ function pickLocal(value) {
     return value;
   }
   return value.zh || value.en || "";
+}
+
+function sameLocalName(left, right) {
+  const leftZh = String(left?.zh || "").trim().toLowerCase();
+  const leftEn = String(left?.en || "").trim().toLowerCase();
+  const rightZh = String(right?.zh || "").trim().toLowerCase();
+  const rightEn = String(right?.en || "").trim().toLowerCase();
+  return Boolean((leftZh && leftZh === rightZh) || (leftEn && leftEn === rightEn));
+}
+
+function createLocalId(prefix, index = Date.now()) {
+  return `${prefix}-${index}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function setStatus(message, tone = "warn") {

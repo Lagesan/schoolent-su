@@ -118,10 +118,18 @@ function personRoleTemplate() {
 
 function personTemplate() {
   return {
+    id: "",
     name: localized("", ""),
     roles: [],
     status: "ACTIVE",
-    note: localized("", "")
+    note: localized("", ""),
+    rotation: {
+      enabled: false,
+      order: 0,
+      status: "UPCOMING",
+      period: localized("", ""),
+      note: localized("", "")
+    }
   };
 }
 
@@ -260,7 +268,7 @@ function createContentId(prefix, value, index = 0) {
     prefix,
     normalizeString(value?.date, ""),
     normalizeString(value?.tag || value?.status, ""),
-    normalizeString(value?.title?.zh || value?.title?.en || value?.label?.zh || value?.label?.en, ""),
+    normalizeString(value?.title?.zh || value?.title?.en || value?.label?.zh || value?.label?.en || value?.name?.zh || value?.name?.en || value?.person?.zh || value?.person?.en, ""),
     index
   ].join("|");
 
@@ -391,14 +399,26 @@ function normalizePersonRole(value, fallback) {
   };
 }
 
-function normalizePerson(value, fallback) {
+function normalizePersonRotation(value, fallback) {
   return {
+    enabled: normalizeBoolean(value?.enabled, fallback.enabled),
+    order: normalizeNumber(value?.order, fallback.order),
+    status: normalizeString(value?.status, fallback.status),
+    period: normalizeLocalized(value?.period, fallback.period),
+    note: normalizeLocalized(value?.note, fallback.note)
+  };
+}
+
+function normalizePerson(value, fallback, index = 0) {
+  return {
+    id: createContentId("person", value, index),
     name: normalizeLocalized(value?.name || value?.person, fallback.name),
     roles: Array.isArray(value?.roles)
       ? value.roles.map((item) => normalizePersonRole(item, personRoleTemplate()))
       : fallback.roles.map((item) => normalizePersonRole(item, personRoleTemplate())),
     status: normalizeString(value?.status, fallback.status),
-    note: normalizeLocalized(value?.note, fallback.note)
+    note: normalizeLocalized(value?.note, fallback.note),
+    rotation: normalizePersonRotation(value?.rotation, fallback.rotation)
   };
 }
 
@@ -430,6 +450,75 @@ function normalizePresidentRotation(value, fallback) {
       ? value.members.map((item) => normalizePresidentRotationMember(item, presidentRotationMemberTemplate()))
       : fallback.members.map((item) => normalizePresidentRotationMember(item, presidentRotationMemberTemplate()))
   };
+}
+
+function mergeLegacyRotationIntoPeople(people, rotation) {
+  const merged = people.map((person, index) => ({
+    ...person,
+    rotation: {
+      ...person.rotation,
+      order: person.rotation?.order || index + 1
+    }
+  }));
+
+  const members = Array.isArray(rotation?.members) ? rotation.members : [];
+  for (const member of members) {
+    const normalized = normalizePresidentRotationMember(member, presidentRotationMemberTemplate());
+    const name = normalized.person;
+    const existing = merged.find((person) => sameLocalizedName(person.name, name));
+    const rotationState = {
+      enabled: true,
+      order: normalized.order || merged.length + 1,
+      status: normalized.status,
+      period: normalizeLocalized(rotation?.currentPeriod, localized("", "")),
+      note: normalized.note
+    };
+
+    if (existing) {
+      existing.rotation = {
+        ...existing.rotation,
+        ...rotationState
+      };
+      if (pickLocalized(normalized.baseRole) && !existing.roles.some((role) => sameLocalizedName(role.title, normalized.baseRole))) {
+        existing.roles.push({
+          title: normalized.baseRole,
+          scope: localized("", ""),
+          status: "ACTIVE"
+        });
+      }
+      continue;
+    }
+
+    merged.push({
+      ...personTemplate(),
+      id: createContentId("person", { person: name }, merged.length),
+      name,
+      roles: pickLocalized(normalized.baseRole)
+        ? [{
+          title: normalized.baseRole,
+          scope: localized("", ""),
+          status: "ACTIVE"
+        }]
+        : [],
+      status: "ACTIVE",
+      note: localized("", ""),
+      rotation: rotationState
+    });
+  }
+
+  return merged;
+}
+
+function sameLocalizedName(left, right) {
+  return ["zh", "en"].some((lang) => {
+    const leftName = normalizeString(left?.[lang]).toLowerCase();
+    const rightName = normalizeString(right?.[lang]).toLowerCase();
+    return leftName && leftName === rightName;
+  });
+}
+
+function pickLocalized(value) {
+  return normalizeString(value?.zh || value?.en, "");
 }
 
 function normalizeFinanceCategory(value, fallback) {
@@ -472,6 +561,13 @@ export function normalizeContent(value = {}) {
   const departmentSeed = Array.isArray(value.organization?.departments)
     ? value.organization.departments
     : legacyTeams;
+  const normalizedRotation = normalizePresidentRotation(
+    value.organization?.presidentRotation,
+    fallback.organization.presidentRotation
+  );
+  const normalizedPeople = Array.isArray(value.organization?.people)
+    ? value.organization.people.map((item, index) => normalizePerson(item, personTemplate(), index))
+    : fallback.organization.people.map((item, index) => normalizePerson(item, personTemplate(), index));
 
   return {
     site: {
@@ -505,13 +601,8 @@ export function normalizeContent(value = {}) {
         },
         fallback.organization.monthlyPresident
       ),
-      presidentRotation: normalizePresidentRotation(
-        value.organization?.presidentRotation,
-        fallback.organization.presidentRotation
-      ),
-      people: Array.isArray(value.organization?.people)
-        ? value.organization.people.map((item) => normalizePerson(item, personTemplate()))
-        : fallback.organization.people.map((item) => normalizePerson(item, personTemplate())),
+      presidentRotation: normalizedRotation,
+      people: mergeLegacyRotationIntoPeople(normalizedPeople, normalizedRotation),
       departments: Array.isArray(departmentSeed)
         ? departmentSeed.map((item) => normalizeDepartment(item, departmentTemplate()))
         : fallback.organization.departments.map((item) => normalizeDepartment(item, departmentTemplate()))

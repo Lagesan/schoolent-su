@@ -30,7 +30,7 @@ const ui = {
       roleLabel: "职位"
     },
     metrics: {
-      teams: "部门节点",
+      teams: "人员节点",
       activities: "已发布活动",
       finance: "财务状态",
       ai: "AI 接口预留"
@@ -102,7 +102,7 @@ const ui = {
       roleLabel: "Role"
     },
     metrics: {
-      teams: "Department Nodes",
+      teams: "People Nodes",
       activities: "Published Updates",
       finance: "Finance Status",
       ai: "AI-Ready API"
@@ -459,15 +459,14 @@ function renderAppModeHub(content, language, meta) {
 
 function renderMetrics(content, language) {
   const activityItems = toArray(content.activities?.items);
-  const departmentItems = toArray(content.organization?.departments);
-  const hasLeadership = Boolean(pick(content.organization?.leadership?.title) || pick(content.organization?.leadership?.scope));
+  const peopleItems = toArray(content.organization?.people);
   const aiReady = Boolean(content.settings?.aiReady);
   const publishedUpdates = toArray(content.updates?.items).filter((item) => item.published).length;
   const publishedActivities = activityItems.filter((item) => item.published).length;
   const metrics = [
     {
       label: language.metrics.teams,
-      value: departmentItems.length + (hasLeadership ? 1 : 0)
+      value: peopleItems.length
     },
     {
       label: language.metrics.activities,
@@ -532,23 +531,29 @@ function renderOrganization(organization, language) {
   const root = organization?.leadership || {};
   const monthlyPresident = organization?.monthlyPresident || {};
   const presidentRotation = organization?.presidentRotation || {};
-  const rotationMembers = toArray(presidentRotation.members).slice().sort((left, right) => Number(left.order || 0) - Number(right.order || 0));
   const people = toArray(organization?.people);
-  const departments = toArray(organization?.departments);
+  const rotationMembers = people
+    .filter((person) => person.rotation?.enabled)
+    .slice()
+    .sort((left, right) => Number(left.rotation?.order || 0) - Number(right.rotation?.order || 0));
+  const currentRotationPerson = rotationMembers.find((person) => String(person.rotation?.status || "").toUpperCase() === "CURRENT");
   const hasRootContent = Boolean(pick(root.title) || pick(root.scope));
-  const hasMonthlyContent = Boolean(pick(monthlyPresident.person) || pick(monthlyPresident.period) || pick(monthlyPresident.note));
+  const hasMonthlyContent = Boolean(currentRotationPerson || pick(monthlyPresident.person) || pick(monthlyPresident.period) || pick(monthlyPresident.note));
   const hasRotationContent = Boolean(
     pick(presidentRotation.heading) ||
-    pick(presidentRotation.currentPresident) ||
     pick(presidentRotation.currentPeriod) ||
     pick(presidentRotation.note) ||
     rotationMembers.length
   );
 
-  if (!hasRootContent && !hasMonthlyContent && !hasRotationContent && !people.length && !departments.length) {
+  if (!hasRootContent && !hasMonthlyContent && !hasRotationContent && !people.length) {
     dom.organizationChart.innerHTML = emptyState();
     return;
   }
+
+  const monthlyName = currentRotationPerson ? pick(currentRotationPerson.name) : pick(monthlyPresident.person);
+  const monthlyPeriod = currentRotationPerson ? pick(currentRotationPerson.rotation?.period) || pick(presidentRotation.currentPeriod) || pick(monthlyPresident.period) : pick(monthlyPresident.period);
+  const monthlyNote = currentRotationPerson ? pick(currentRotationPerson.rotation?.note) || pick(monthlyPresident.note) : pick(monthlyPresident.note);
 
   dom.organizationChart.innerHTML = `
     <article class="org-map">
@@ -563,9 +568,9 @@ function renderOrganization(organization, language) {
       ${hasMonthlyContent ? `
         <section class="org-monthly-panel">
           <p class="section-label">${escapeHtml(language.organization.monthlyTitle.toUpperCase())}</p>
-          <h4>${escapeHtml(pick(monthlyPresident.person))}</h4>
-          ${pick(monthlyPresident.period) ? `<p class="tag">${escapeHtml(pick(monthlyPresident.period))}</p>` : ""}
-          ${renderOptionalParagraph("org-copy", pick(monthlyPresident.note))}
+          <h4>${escapeHtml(monthlyName || language.organization.rotationTitle)}</h4>
+          ${monthlyPeriod ? `<p class="tag">${escapeHtml(monthlyPeriod)}</p>` : ""}
+          ${renderOptionalParagraph("org-copy", monthlyNote)}
         </section>
       ` : ""}
       ${people.length ? `
@@ -581,6 +586,7 @@ function renderOrganization(organization, language) {
                       <span>${escapeHtml(String(toArray(person.roles).length))} ${escapeHtml(language.organization.roleLabel)}</span>
                     </div>
                     <h4>${escapeHtml(pick(person.name))}</h4>
+                    ${person.rotation?.enabled ? `<p class="tag">${escapeHtml(language.organization.rotationOrder)} #${escapeHtml(String(person.rotation.order || ""))}</p>` : ""}
                     <div class="org-role-stack">
                       ${toArray(person.roles)
               .map(
@@ -606,10 +612,10 @@ function renderOrganization(organization, language) {
         <section class="org-rotation-panel">
           <div class="section-header org-subheader">
             <p class="section-label">${escapeHtml((pick(presidentRotation.heading) || language.organization.rotationTitle).toUpperCase())}</p>
-            <h4>${escapeHtml(pick(presidentRotation.currentPresident) || language.organization.rotationTitle)}</h4>
+            <h4>${escapeHtml(monthlyName || language.organization.rotationTitle)}</h4>
           </div>
           <div class="org-rotation-head">
-            ${pick(presidentRotation.currentPeriod) ? `<p class="tag">${escapeHtml(language.organization.rotationCurrent)}: ${escapeHtml(pick(presidentRotation.currentPeriod))}</p>` : ""}
+            ${(monthlyPeriod || pick(presidentRotation.currentPeriod)) ? `<p class="tag">${escapeHtml(language.organization.rotationCurrent)}: ${escapeHtml(monthlyPeriod || pick(presidentRotation.currentPeriod))}</p>` : ""}
             ${pick(presidentRotation.note) ? `<p class="org-copy">${escapeHtml(pick(presidentRotation.note))}</p>` : ""}
           </div>
           <div class="org-rotation-list">
@@ -617,14 +623,14 @@ function renderOrganization(organization, language) {
         ? rotationMembers
           .map(
             (item) => `
-                    <article class="org-rotation-card${String(item.status || "").toUpperCase() === "CURRENT" ? " is-current" : ""}">
+                    <article class="org-rotation-card${String(item.rotation?.status || "").toUpperCase() === "CURRENT" ? " is-current" : ""}">
                       <div class="timeline-meta">
-                        <span>${escapeHtml(language.organization.rotationOrder)} #${escapeHtml(String(item.order || ""))}</span>
-                        <span>${escapeHtml(item.status || "UPCOMING")}</span>
+                        <span>${escapeHtml(language.organization.rotationOrder)} #${escapeHtml(String(item.rotation?.order || ""))}</span>
+                        <span>${escapeHtml(item.rotation?.status || "UPCOMING")}</span>
                       </div>
-                      <h4>${escapeHtml(pick(item.person))}</h4>
-                      ${renderOptionalParagraph("org-lead", pick(item.baseRole))}
-                      ${renderOptionalParagraph("org-copy", pick(item.note))}
+                      <h4>${escapeHtml(pick(item.name))}</h4>
+                      ${renderOptionalParagraph("org-lead", pick(toArray(item.roles)[0]?.title))}
+                      ${renderOptionalParagraph("org-copy", pick(item.rotation?.note))}
                     </article>
                   `
           )
@@ -634,20 +640,6 @@ function renderOrganization(organization, language) {
           </div>
         </section>
       ` : ""}
-      <div class="org-grid">
-        ${departments
-      .map(
-        (department) => `
-              <article class="org-node">
-                <div class="org-link-label">${escapeHtml(language.common.connect)}</div>
-                <p class="tag">${escapeHtml(department.status || "ACTIVE")}</p>
-                <h4>${escapeHtml(pick(department.title))}</h4>
-                ${renderOptionalParagraph("org-copy", pick(department.scope))}
-              </article>
-            `
-      )
-      .join("")}
-      </div>
     </article>
   `;
 }
