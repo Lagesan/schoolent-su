@@ -187,9 +187,7 @@ select {
 .empty-state,
 .status-strip,
 .admin-card,
-.org-map,
-.org-root,
-.org-node {
+.org-map {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -937,9 +935,7 @@ body[data-page-type="update-detail"] .detail-stream {
 
 .proposal-card h4,
 .publication-card h4,
-.timeline-title,
-.org-root h4,
-.org-node h4 {
+.timeline-title {
   margin: 0 0 12px;
   font-size: 1.15rem;
   font-family: var(--font-serif);
@@ -978,23 +974,6 @@ body[data-page-type="update-detail"] .detail-stream {
 .org-map {
   padding: 48px;
   position: relative;
-}
-
-.org-root {
-  max-width: 320px;
-  margin: 0 auto;
-  padding: 24px;
-  text-align: center;
-  position: relative;
-  z-index: 1;
-  border-color: var(--text);
-}
-
-.org-rail {
-  width: 1px;
-  height: 48px;
-  margin: 0 auto;
-  background: var(--line-strong);
 }
 
 .org-monthly-panel,
@@ -1103,46 +1082,6 @@ body[data-page-type="update-detail"] .detail-stream {
   padding: 22px 24px;
   border: 1px solid var(--line);
   background: var(--bg-soft);
-}
-
-.org-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-  position: relative;
-}
-
-.org-grid::before {
-  content: "";
-  position: absolute;
-  top: -24px;
-  left: 16.66%;
-  right: 16.66%;
-  height: 1px;
-  background: var(--line-strong);
-}
-
-.org-node {
-  padding: 24px;
-  position: relative;
-}
-
-.org-node::before {
-  content: "";
-  position: absolute;
-  top: -24px;
-  left: 50%;
-  width: 1px;
-  height: 24px;
-  background: var(--line-strong);
-}
-
-.org-link-label {
-  color: var(--text-faint);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-bottom: 12px;
 }
 
 .org-lead {
@@ -1441,7 +1380,6 @@ body[data-page-type="update-detail"] .detail-stream {
   .proposal-grid,
   .publication-grid,
   .finance-number-grid,
-  .org-grid,
   .org-rotation-list {
     grid-template-columns: 1fr;
   }
@@ -1470,15 +1408,6 @@ body[data-page-type="update-detail"] .detail-stream {
     padding: 32px 24px;
   }
 
-  .org-grid::before,
-  .org-node::before,
-  .org-rail {
-    display: none;
-  }
-
-  .org-node {
-    border-top: 1px solid var(--line);
-  }
 }
 
 @media (max-width: 640px) {
@@ -1618,7 +1547,6 @@ body.is-app-shell .section-header {
 body.is-app-shell .proposal-grid,
 body.is-app-shell .publication-grid,
 body.is-app-shell .finance-number-grid,
-body.is-app-shell .org-grid,
 body.is-app-shell .org-people-grid,
 body.is-app-shell .org-rotation-list {
   grid-template-columns: 1fr;

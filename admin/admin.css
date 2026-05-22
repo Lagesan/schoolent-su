@@ -200,6 +200,10 @@
   overflow: hidden;
 }
 
+.list-item[draggable="true"] {
+  cursor: grab;
+}
+
 .list-item summary {
   list-style: none;
   cursor: pointer;
@@ -253,6 +257,9 @@
 .rotation-sort-list {
   display: grid;
   gap: 12px;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px dashed var(--line);
 }
 
 .rotation-sort-card {

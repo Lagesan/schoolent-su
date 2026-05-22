@@ -168,7 +168,6 @@ function renderEditor() {
   dom.editorPanel.hidden = false;
 
   preparePeopleModel();
-  const leadership = state.content.organization.leadership;
   const presidentRotation = state.content.organization.presidentRotation || {
     heading: { zh: "会长轮换顺序", en: "President rotation order" },
     currentPeriod: { zh: "", en: "" },
@@ -255,24 +254,15 @@ function renderEditor() {
         </div>
 
         <div class="editor-card">
-          <h4>核心节点</h4>
-          <p class="help-copy">这里只保留组织顶部说明。具体谁做什么，全部到下面的人员名册里维护。</p>
-          <div class="editor-grid">
-            ${localizedFields("核心节点名称", "organization.leadership.title", leadership.title)}
-            ${localizedFields("负责范围", "organization.leadership.scope", leadership.scope, true)}
-            ${inputField("状态标签", "organization.leadership.status", leadership.status)}
-          </div>
-        </div>
-
-        <div class="editor-card">
           <h4>人员名册</h4>
-          <p class="help-copy">现在只维护这一批人。长期职务写在人员下面；需要参与会长轮换，就勾选“加入轮换”，再到下方拖动排序。</p>
+          <p class="help-copy">现在只维护这一批人。长期职务写在人员下面；需要参与会长轮换，可以勾选，也可以直接把展开的人员项拖到下方排序区。</p>
           <div class="stack-list">
             ${people
               .map((person, personIndex) =>
                 listItem({
                   title: pickLocal(person.name),
                   meta: `${person.status} / ${person.roles?.length || 0} role(s)${person.rotation?.enabled ? " / 轮换" : ""}`,
+                  attrs: `draggable="true" data-person-roster-item data-person-index="${personIndex}"`,
                   body: `
                     <div class="list-body">
                       <div class="editor-grid">
@@ -309,6 +299,7 @@ function renderEditor() {
                       </div>
                       <div class="row-actions">
                         <button class="button button-secondary" type="button" data-action="add-person-role" data-person-index="${personIndex}">给此人新增职位</button>
+                        <button class="button button-secondary" type="button" data-action="toggle-rotation" data-person-index="${personIndex}">移到会长轮换</button>
                         <button class="button button-danger" type="button" data-action="remove" data-array-path="organization.people" data-index="${personIndex}">删除此人</button>
                       </div>
                     </div>
@@ -324,7 +315,7 @@ function renderEditor() {
 
         <div class="editor-card">
           <h4>会长轮换排序</h4>
-          <p class="help-copy">拖动人员卡片即可排序。也可以用上移/下移按钮，当前轮值人把标注写成 CURRENT。</p>
+          <p class="help-copy">把人员名册里的展开项拖到这里即可加入轮换并自动收起。已有轮换人员可继续拖动排序，也可以用上移/下移按钮。</p>
           <div class="editor-grid">
             ${localizedFields("轮换区标题", "organization.presidentRotation.heading", presidentRotation.heading)}
             ${localizedFields("轮换说明", "organization.presidentRotation.note", presidentRotation.note, true)}
@@ -734,6 +725,32 @@ function reorderRotationPeople(fromPersonIndex, toPersonIndex) {
   applyRotationOrder(reordered);
 }
 
+function addOrReorderRotationPerson(fromPersonIndex, toPersonIndex = null) {
+  const people = state.content.organization.people || [];
+  const fromPerson = people[fromPersonIndex];
+  if (!fromPerson) {
+    return;
+  }
+
+  const wasEnabled = Boolean(fromPerson.rotation?.enabled);
+  setPersonRotationEnabled(fromPersonIndex, true);
+  const rotationPeople = getRotationPeople().filter((person) => person !== fromPerson);
+  const toPerson = toPersonIndex === null ? null : people[toPersonIndex];
+  const to = toPerson ? rotationPeople.indexOf(toPerson) : -1;
+
+  if (to >= 0) {
+    rotationPeople.splice(to, 0, fromPerson);
+  } else {
+    rotationPeople.push(fromPerson);
+  }
+
+  applyRotationOrder(rotationPeople);
+
+  if (!wasEnabled) {
+    setStatus("已加入会长轮换。", "ok");
+  }
+}
+
 function normalizeRotationOrder() {
   applyRotationOrder(getRotationPeople());
 }
@@ -881,7 +898,8 @@ async function handleEditorClick(event) {
 
   if (action === "toggle-rotation") {
     const personIndex = Number(button.dataset.personIndex);
-    setPersonRotationEnabled(personIndex, button.checked);
+    const enabled = button.matches('input[type="checkbox"]') ? button.checked : true;
+    setPersonRotationEnabled(personIndex, enabled);
     markDirty();
     renderEditor();
     return;
@@ -960,7 +978,7 @@ function handleBeforeUnload(event) {
 }
 
 function handleRotationDragStart(event) {
-  const card = event.target.closest(".rotation-sort-card");
+  const card = event.target.closest(".rotation-sort-card, [data-person-roster-item]");
   if (!card) {
     return;
   }
@@ -984,8 +1002,8 @@ function handleRotationDrop(event) {
 
   event.preventDefault();
   const fromIndex = Number(event.dataTransfer.getData("text/plain"));
-  const toIndex = targetCard ? Number(targetCard.dataset.personIndex) : fromIndex;
-  reorderRotationPeople(fromIndex, toIndex);
+  const toIndex = targetCard ? Number(targetCard.dataset.personIndex) : null;
+  addOrReorderRotationPerson(fromIndex, toIndex);
   markDirty();
   renderEditor();
 }
@@ -1116,7 +1134,7 @@ function renderAdminDocs() {
 
         <article class="doc-card">
           <h4>组织关系图</h4>
-          <p>组织架构以人员名册为中心。先新增人员，再给这个人加长期职务；需要进入会长轮换时勾选“加入轮换”，然后在“会长轮换排序”里拖动排序并把当前轮值人标注为 CURRENT。</p>
+          <p>组织架构以人员名册为中心。先新增人员，再给这个人加长期职务；需要进入会长轮换时，可以勾选“加入轮换”，也可以把展开的人员项直接拖到“会长轮换排序”。当前轮值人标注为 CURRENT。</p>
         </article>
 
         <article class="doc-card">
@@ -1153,9 +1171,9 @@ function renderAdminDocs() {
   `;
 }
 
-function listItem({ title, meta, body }) {
+function listItem({ title, meta, body, attrs = "" }) {
   return `
-    <details class="list-item">
+    <details class="list-item" ${attrs}>
       <summary>
         <span class="summary-title">${escapeHtml(title || "未命名")}</span>
         <span class="summary-meta">${escapeHtml(meta || "")}</span>
