@@ -43,7 +43,7 @@
 }
 
 .editor-toolbar {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   align-items: center;
 }
 
@@ -128,6 +128,10 @@
   color: var(--text);
 }
 
+.editor-toolbar .button-primary {
+  border-color: var(--text);
+}
+
 .button-danger {
   border-color: rgba(255, 184, 184, 0.35);
   color: var(--danger);
@@ -137,6 +141,59 @@
 .help-copy {
   color: var(--text-faint);
   font-size: 0.9rem;
+}
+
+.admin-docs {
+  gap: 22px;
+}
+
+.doc-hero {
+  max-width: 72ch;
+}
+
+.doc-hero h3 {
+  margin: 8px 0 10px;
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 400;
+}
+
+.doc-hero p:last-child {
+  color: var(--text-muted);
+}
+
+.doc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.doc-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.doc-card h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.doc-card p,
+.doc-card ol,
+.doc-card ul {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.doc-card ol,
+.doc-card ul {
+  display: grid;
+  gap: 8px;
+  padding-left: 1.2rem;
 }
 
 .list-item {
@@ -266,7 +323,8 @@
   .editor-grid,
   .editor-toolbar,
   .preview-grid,
-  .rich-grid {
+  .rich-grid,
+  .doc-grid {
     grid-template-columns: 1fr;
   }
 }

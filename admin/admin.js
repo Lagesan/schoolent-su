@@ -1,7 +1,9 @@
 const state = {
   content: null,
   meta: null,
-  authenticated: false
+  authenticated: false,
+  view: "editor",
+  dirty: false
 };
 
 const dom = {
@@ -94,6 +96,8 @@ dom.loginPanel.addEventListener("submit", handleLoginSubmit);
 dom.editorPanel.addEventListener("input", handleFieldInput);
 dom.editorPanel.addEventListener("change", handleFieldInput);
 dom.editorPanel.addEventListener("click", handleEditorClick);
+dom.editorPanel.addEventListener("mousedown", handleEditorMouseDown);
+window.addEventListener("beforeunload", handleBeforeUnload);
 
 init();
 
@@ -150,6 +154,7 @@ async function loadEditor() {
 
     state.content = payload.content;
     state.meta = payload.meta;
+    state.dirty = false;
     renderEditor();
     setStatus("后台已连接，可以编辑并发布。", "ok");
   } catch (error) {
@@ -184,13 +189,16 @@ function renderEditor() {
   dom.editorPanel.innerHTML = `
     <div class="editor-layout">
       <div class="editor-toolbar">
+        <button class="button ${state.view === "editor" ? "button-primary" : "button-secondary"}" type="button" data-action="switch-view" data-view="editor">编辑内容</button>
+        <button class="button ${state.view === "docs" ? "button-primary" : "button-secondary"}" type="button" data-action="switch-view" data-view="docs">操作文档</button>
         <button class="button button-primary" type="button" data-action="save">保存并发布</button>
         <button class="button button-secondary" type="button" data-action="export">导出离线包</button>
         <a class="button button-secondary" href="/" target="_blank" rel="noreferrer">打开前台</a>
         <button class="button button-plain" type="button" data-action="logout">退出登录</button>
       </div>
-      <p class="admin-meta">最近发布时间：${escapeHtml(formatDate(state.meta?.updatedAt))}</p>
+      <p class="admin-meta">最近发布时间：${escapeHtml(formatDate(state.meta?.updatedAt))} · <span data-dirty-state>${state.dirty ? "有未保存更改" : "当前无未保存更改"}</span></p>
 
+      ${state.view === "docs" ? renderAdminDocs() : `
       <section class="editor-section">
         <h3>站点信息</h3>
         <div class="editor-grid">
@@ -664,6 +672,7 @@ function renderEditor() {
           <label for="setting-ai-ready">显示“AI / API 预留接口”状态</label>
         </div>
       </section>
+      `}
     </div>
   `;
 
@@ -716,6 +725,7 @@ function handleFieldInput(event) {
   const richPath = target.dataset.richPath;
   if (richPath && state.content) {
     setByPath(state.content, richPath, target.innerHTML);
+    markDirty();
     return;
   }
 
@@ -726,6 +736,7 @@ function handleFieldInput(event) {
 
   const value = target.type === "checkbox" ? target.checked : target.type === "number" ? Number(target.value || 0) : target.value;
   setByPath(state.content, path, value);
+  markDirty();
 }
 
 async function handleEditorClick(event) {
@@ -736,19 +747,30 @@ async function handleEditorClick(event) {
 
   const { action } = button.dataset;
 
+  if (action === "switch-view") {
+    state.view = button.dataset.view || "editor";
+    renderEditor();
+    return;
+  }
+
   if (action === "add") {
     const path = button.dataset.arrayPath;
     const array = getByPath(state.content, path);
     array.push(factories[path]());
+    markDirty();
     renderEditor();
     return;
   }
 
   if (action === "remove") {
+    if (!confirmDestructive("确定删除这一项吗？删除后需要保存并发布才会影响前台。")) {
+      return;
+    }
     const path = button.dataset.arrayPath;
     const index = Number(button.dataset.index);
     const array = getByPath(state.content, path);
     array.splice(index, 1);
+    markDirty();
     renderEditor();
     return;
   }
@@ -757,22 +779,31 @@ async function handleEditorClick(event) {
     const personIndex = Number(button.dataset.personIndex);
     state.content.organization.people[personIndex].roles ||= [];
     state.content.organization.people[personIndex].roles.push(factories["person.roles"]());
+    markDirty();
     renderEditor();
     return;
   }
 
   if (action === "remove-person-role") {
+    if (!confirmDestructive("确定删除这个职位吗？删除后需要保存并发布才会影响前台。")) {
+      return;
+    }
     const personIndex = Number(button.dataset.personIndex);
     const roleIndex = Number(button.dataset.roleIndex);
     state.content.organization.people[personIndex].roles.splice(roleIndex, 1);
+    markDirty();
     renderEditor();
     return;
   }
 
   if (action === "remove-attachment") {
+    if (!confirmDestructive("确定移除这个附件吗？保存并发布后前台将不再显示它。")) {
+      return;
+    }
     const updateIndex = Number(button.dataset.updateIndex);
     const attachmentIndex = Number(button.dataset.attachmentIndex);
     state.content.updates.items[updateIndex].attachments.splice(attachmentIndex, 1);
+    markDirty();
     renderEditor();
     return;
   }
@@ -800,8 +831,26 @@ async function handleEditorClick(event) {
   }
 
   if (action === "logout") {
+    if (state.dirty && !confirmDestructive("当前有未保存更改，确定退出登录吗？")) {
+      return;
+    }
     await logout();
   }
+}
+
+function handleEditorMouseDown(event) {
+  if (event.target.closest('[data-action="rich-command"]')) {
+    event.preventDefault();
+  }
+}
+
+function handleBeforeUnload(event) {
+  if (!state.dirty) {
+    return;
+  }
+
+  event.preventDefault();
+  event.returnValue = "";
 }
 
 async function saveContent() {
@@ -823,6 +872,7 @@ async function saveContent() {
 
     state.content = payload.content;
     state.meta = payload.meta;
+    state.dirty = false;
     renderEditor();
     setStatus("内容已发布到前台。", "ok");
   } catch (error) {
@@ -866,6 +916,7 @@ async function uploadAttachment(updateIndex, file) {
     }
 
     state.content.updates.items[updateIndex].attachments.push(payload.asset);
+    markDirty();
     renderEditor();
     setStatus("附件已上传并加入当前 Update。", "ok");
   } catch (error) {
@@ -883,9 +934,85 @@ async function logout() {
     state.authenticated = false;
     state.content = null;
     state.meta = null;
+    state.dirty = false;
     renderLogin();
     setStatus("已退出登录。", "warn");
   }
+}
+
+function renderAdminDocs() {
+  return `
+    <section class="editor-section admin-docs">
+      <div class="doc-hero">
+        <p class="section-label">ADMIN DOC</p>
+        <h3>后台操作文档</h3>
+        <p>这份文档给第一次接手后台的人使用。原则很简单：先改内容，再保存并发布，最后打开前台确认效果。</p>
+      </div>
+
+      <div class="doc-grid">
+        <article class="doc-card">
+          <h4>最快发布流程</h4>
+          <ol>
+            <li>点“编辑内容”，找到要修改的模块。</li>
+            <li>展开对应条目，中文和英文都尽量填完整。</li>
+            <li>勾选“前台公开显示”后，点击“保存并发布”。</li>
+            <li>点“打开前台”检查首页、Updates 或详情页显示是否正确。</li>
+          </ol>
+        </article>
+
+        <article class="doc-card">
+          <h4>双语字段怎么填</h4>
+          <p>后台里的“中文”和“English”会跟随前台语言切换展示。只填中文也能显示，但英文模式可能出现空内容，所以正式发布前建议两边都补齐。</p>
+        </article>
+
+        <article class="doc-card">
+          <h4>公告 / Updates</h4>
+          <p>适合发布通知、活动复盘、正式说明和附件。标题、日期、标签、摘要会出现在列表页，正文会进入详情页。标签可以写 NOTICE、UPDATE、ACTIVITY 等短词。</p>
+          <p>附件上传后会先加入当前 Update，仍然需要点击“保存并发布”才会出现在前台。</p>
+        </article>
+
+        <article class="doc-card">
+          <h4>近期活动</h4>
+          <p>用于首页的活动卡片。日期时间建议写成 ISO 格式，例如 2026-05-22T19:30:00+08:00；状态可以用 PLANNED、FINISHED、LIVE 等短标签。</p>
+        </article>
+
+        <article class="doc-card">
+          <h4>组织关系图</h4>
+          <p>“人员与职位”用于维护人和岗位；“当月轮值主席”用于当前展示；“会长轮换顺序”用于说明轮换规则。一般只需要改这三块。</p>
+        </article>
+
+        <article class="doc-card">
+          <h4>财务公开</h4>
+          <p>关闭“前台显示详细财务数据”时，前台只显示说明，不展示明细。金额字段只填数字，不要带货币符号。</p>
+        </article>
+
+        <article class="doc-card">
+          <h4>提案与纪要</h4>
+          <p>提案追踪适合展示正在推进或排队的事项；公开纪要适合发布已经整理好的会议记录、说明或简短结论。</p>
+        </article>
+
+        <article class="doc-card">
+          <h4>页尾与社媒</h4>
+          <p>会长邮箱、底部声明和社媒链接会同步到首页、Updates、详情页和提案页。链接 URL 必须包含 https:// 或 mailto:。</p>
+        </article>
+
+        <article class="doc-card">
+          <h4>安全操作习惯</h4>
+          <ul>
+            <li>删除条目前先确认是否只是想隐藏，能取消公开就别急着删。</li>
+            <li>长正文先在本地备份一份，再粘贴进富文本编辑器。</li>
+            <li>看到“有未保存更改”时，不要直接关闭页面。</li>
+            <li>保存后一定打开前台检查移动端宽度下是否好读。</li>
+          </ul>
+        </article>
+
+        <article class="doc-card">
+          <h4>导出离线包</h4>
+          <p>“导出离线包”会下载当前内容的静态备份，适合在大改之前留档，或给不能登录后台的人审阅。</p>
+        </article>
+      </div>
+    </section>
+  `;
 }
 
 function listItem({ title, meta, body }) {
@@ -1033,6 +1160,15 @@ function pickLocal(value) {
 function setStatus(message, tone = "warn") {
   dom.status.dataset.tone = tone;
   dom.status.textContent = message;
+}
+
+function markDirty() {
+  state.dirty = true;
+  dom.editorPanel.querySelector("[data-dirty-state]")?.replaceChildren("有未保存更改");
+}
+
+function confirmDestructive(message) {
+  return window.confirm(message);
 }
 
 function getByPath(object, path) {
