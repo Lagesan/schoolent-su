@@ -1285,8 +1285,7 @@ body[data-page-type="update-detail"] .detail-stream {
   isolation: isolate;
 }
 
-.footer-brand-button::after,
-.detail-schoolent-button::after {
+.footer-brand-button::after {
   content: "";
   position: absolute;
   inset: -10px;
@@ -1331,10 +1330,7 @@ body[data-page-type="update-detail"] .detail-stream {
 
 .footer-brand-button:hover::after,
 .footer-brand-button:focus-visible::after,
-.footer-brand-button.is-pressed::after,
-.detail-schoolent-button:hover::after,
-.detail-schoolent-button:focus-visible::after,
-.detail-schoolent-button.is-pressed::after {
+.footer-brand-button.is-pressed::after {
   opacity: 1;
   transform: scale(1);
   border-color: rgba(255, 255, 255, 0.22);
@@ -1436,76 +1432,6 @@ body[data-page-type="update-detail"] .detail-stream {
   background: transparent;
   color: var(--text);
   cursor: pointer;
-}
-
-.detail-footer {
-  margin: 44px auto 0;
-  max-width: 980px;
-  border-top: 1px solid var(--line);
-  padding-top: 18px;
-}
-
-.detail-schoolent-button {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 16px;
-  align-items: center;
-  width: 100%;
-  padding: 16px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  isolation: isolate;
-}
-
-.detail-schoolent-button:hover,
-.detail-schoolent-button:focus-visible,
-.detail-schoolent-button.is-pressed {
-  border-color: var(--line-strong);
-  background: var(--bg-soft);
-}
-
-.detail-schoolent-orb {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  isolation: isolate;
-}
-
-.detail-schoolent-orb img {
-  width: 58px;
-  height: 58px;
-  object-fit: contain;
-  transition: transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 420ms ease;
-}
-
-.detail-schoolent-button:hover img,
-.detail-schoolent-button:focus-visible img,
-.detail-schoolent-button.is-pressed img {
-  transform: scale(1.08) translateY(-1px);
-  filter: brightness(1.14);
-}
-
-.detail-schoolent-copy {
-  display: grid;
-  gap: 4px;
-}
-
-.detail-schoolent-copy strong {
-  font-family: var(--font-serif);
-  font-size: 1.1rem;
-  font-weight: 400;
-}
-
-.detail-schoolent-copy span {
-  color: var(--text-faint);
-  font-size: 0.82rem;
-  overflow-wrap: anywhere;
 }
 
 /* 响应式适配 */

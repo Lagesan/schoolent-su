@@ -14,8 +14,11 @@ const ui = {
       error: "内容暂时加载失败，请稍后刷新。",
       noItems: "暂时还没有已发布内容。",
       emptyHint: "这个页面已经准备好，等待后续发布内容。",
+      footerPrefix: "会长邮箱",
       backHome: "返回首页",
       updatedAt: "内容更新时间",
+      aiReady: "已预留 AI / API 接口扩展位",
+      fallback: "当前显示的是默认样板数据。",
       updates: "动态更新",
       proposals: "提案追踪",
       updatesBadge: "UPDATES / FEED",
@@ -50,8 +53,11 @@ const ui = {
       error: "Content is temporarily unavailable. Please refresh later.",
       noItems: "No published items yet.",
       emptyHint: "This page is ready for future updates.",
+      footerPrefix: "President Email",
       backHome: "Back Home",
       updatedAt: "Updated",
+      aiReady: "API surface is ready for future AI integrations",
+      fallback: "The site is currently showing seeded sample data.",
       updates: "Updates",
       proposals: "Proposals",
       updatesBadge: "UPDATES / FEED",
@@ -80,6 +86,17 @@ const ui = {
       owner: "Owner"
     }
   }
+};
+
+const socialIcons = {
+  globe: "GL",
+  instagram: "IG",
+  xiaohongshu: "RED",
+  wechat: "WX",
+  bilibili: "B",
+  github: "GH",
+  email: "@",
+  default: "•"
 };
 
 const dom = {
@@ -479,23 +496,56 @@ function renderDetailFooter(content, lang) {
     return;
   }
 
+  const statement = pick(content.footer?.statement);
   const updated = state.meta?.updatedAt ? formatDate(state.meta.updatedAt, true) : "N/A";
+  const badges = [];
+  const links = toArray(content.footer?.socialLinks).filter((item) => item.url);
   const email = content.footer?.presidentEmail || "";
+
+  if (content.settings?.aiReady) {
+    badges.push(lang.common.aiReady);
+  }
+
+  if (state.meta && state.meta.storage === "fallback") {
+    badges.push(lang.common.fallback);
+  }
+
   dom.footer.innerHTML = `
-    <button class="detail-schoolent-button" type="button" data-schoolent-declaration aria-label="Show Schoolent declaration">
-      <span class="detail-schoolent-orb">
-        <img src="/assets/schoolent-icon.png" alt="Schoolent" />
-        <span class="footer-brand-glow" aria-hidden="true"></span>
-      </span>
-      <span class="detail-schoolent-copy">
-        <strong>Schoolent</strong>
-        <span>${escapeHtml(lang.common.updatedAt)}: ${escapeHtml(updated)}</span>
-        ${email ? `<span>${escapeHtml(email)}</span>` : ""}
-      </span>
-    </button>
+    <div class="footer-brand">
+      <div class="footer-brand-tile">
+        <button class="footer-brand-button" type="button" data-schoolent-declaration aria-label="Show Schoolent declaration">
+          <img class="footer-brand-image" src="/assets/schoolent-icon.png" alt="Schoolent" />
+          <span class="footer-brand-glow" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="footer-brand-copy">
+        ${statement ? `<p>${escapeHtml(statement)}</p>` : ""}
+        ${email ? `<p>${escapeHtml(lang.common.footerPrefix)}: ${escapeHtml(email)}</p>` : ""}
+        <p>${escapeHtml(lang.common.updatedAt)}: ${escapeHtml(updated)}</p>
+        <div class="footer-socials" ${links.length ? "" : "hidden"}>
+          ${links
+      .map(
+        (link) => `
+                <a class="social-link" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer">
+                  <span class="social-icon" aria-hidden="true">${escapeHtml(resolveSocialIcon(link.icon))}</span>
+                  <span>${escapeHtml(pick(link.label))}</span>
+                </a>
+              `
+      )
+      .join("")}
+        </div>
+        <div class="footer-badges" ${badges.length ? "" : "hidden"}>
+          ${badges.map((badge) => `<p class="tag">${escapeHtml(badge)}</p>`).join("")}
+        </div>
+      </div>
+    </div>
   `;
 
   dom.footer.querySelector("[data-schoolent-declaration]")?.addEventListener("click", showSchoolentDeclaration);
+}
+
+function resolveSocialIcon(icon) {
+  return socialIcons[icon] || socialIcons.default;
 }
 
 function showSchoolentDeclaration(event) {
