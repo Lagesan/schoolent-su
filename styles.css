@@ -1398,6 +1398,9 @@ body[data-page-type="update-detail"] .detail-stream {
 .declaration-card {
   position: relative;
   width: min(520px, 100%);
+  max-height: min(640px, calc(100dvh - 48px));
+  overflow-y: auto;
+  box-sizing: border-box;
   padding: 32px;
   border: 1px solid var(--line-strong);
   background: rgba(5, 5, 5, 0.96);
