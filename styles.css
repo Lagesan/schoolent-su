@@ -1221,6 +1221,7 @@ body[data-page-type="update-detail"] .detail-stream {
   border: 0;
   background: transparent;
   cursor: pointer;
+  touch-action: manipulation;
   isolation: isolate;
 }
 
@@ -1318,6 +1319,8 @@ body[data-page-type="update-detail"] .detail-stream {
   display: grid;
   place-items: center;
   padding: 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: rgba(0, 0, 0, 0);
   opacity: 0;
   pointer-events: none;
@@ -1335,6 +1338,8 @@ body[data-page-type="update-detail"] .detail-stream {
   width: min(520px, 100%);
   max-height: min(640px, calc(100dvh - 48px));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
   padding: 32px;
   border: 1px solid var(--line-strong);

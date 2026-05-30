@@ -983,8 +983,19 @@ function handleRotationDragStart(event) {
     return;
   }
 
+  if (event.target.closest("input, textarea, select, button, a, [contenteditable]")) {
+    event.preventDefault();
+    return;
+  }
+
+  const details = card.matches("details") ? card : card.closest("details");
+  if (details?.open) {
+    details.open = false;
+  }
+
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("text/plain", card.dataset.personIndex);
+  setCompactDragImage(event, card);
 }
 
 function handleRotationDragOver(event) {
@@ -1006,6 +1017,24 @@ function handleRotationDrop(event) {
   addOrReorderRotationPerson(fromIndex, toIndex);
   markDirty();
   renderEditor();
+}
+
+function setCompactDragImage(event, source) {
+  if (typeof event.dataTransfer?.setDragImage !== "function") {
+    return;
+  }
+
+  const title = source.querySelector(".summary-title, strong")?.textContent?.trim() || "未命名";
+  const meta = source.querySelector(".summary-meta, span:not(.drag-handle)")?.textContent?.trim() || "";
+  const ghost = document.createElement("div");
+  ghost.className = "drag-ghost";
+  ghost.innerHTML = `
+    <strong>${escapeHtml(title)}</strong>
+    ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}
+  `;
+  document.body.append(ghost);
+  event.dataTransfer.setDragImage(ghost, 16, 16);
+  window.setTimeout(() => ghost.remove(), 0);
 }
 
 async function saveContent() {

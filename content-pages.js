@@ -123,6 +123,7 @@ init();
 async function init() {
   document.body.classList.toggle("is-app-shell", state.isAppShell);
   renderLanguageSwitch();
+  setupSchoolentDeclarationActions();
 
   if (dom.title) {
     dom.title.textContent = ui[state.lang].common.loading;
@@ -541,11 +542,22 @@ function renderDetailFooter(content, lang) {
     </div>
   `;
 
-  dom.footer.querySelector("[data-schoolent-declaration]")?.addEventListener("click", showSchoolentDeclaration);
 }
 
 function resolveSocialIcon(icon) {
   return socialIcons[icon] || socialIcons.default;
+}
+
+function setupSchoolentDeclarationActions() {
+  document.addEventListener("click", (event) => {
+    const trigger = event.target instanceof Element ? event.target.closest("[data-schoolent-declaration]") : null;
+    if (!trigger) {
+      return;
+    }
+
+    event.preventDefault();
+    showSchoolentDeclaration({ currentTarget: trigger });
+  });
 }
 
 function showSchoolentDeclaration(event) {

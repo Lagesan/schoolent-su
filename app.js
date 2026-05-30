@@ -208,6 +208,7 @@ async function init() {
   document.body.classList.toggle("is-app-shell", state.isAppShell);
   renderLanguageSwitch();
   setupAppModeActions();
+  setupSchoolentDeclarationActions();
 
   if (dom.heroTitle) {
     dom.heroTitle.textContent = ui[state.lang].common.loading;
@@ -873,7 +874,6 @@ function renderFooter(content, meta, language) {
     </div>
   `;
 
-  dom.siteFooter.querySelector("[data-schoolent-declaration]")?.addEventListener("click", showSchoolentDeclaration);
 }
 
 function resolveSocialIcon(icon) {
@@ -896,6 +896,18 @@ function setupAppModeActions() {
       event.preventDefault();
       sharePortal();
     }
+  });
+}
+
+function setupSchoolentDeclarationActions() {
+  document.addEventListener("click", (event) => {
+    const trigger = event.target instanceof Element ? event.target.closest("[data-schoolent-declaration]") : null;
+    if (!trigger) {
+      return;
+    }
+
+    event.preventDefault();
+    showSchoolentDeclaration({ currentTarget: trigger });
   });
 }
 

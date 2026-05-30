@@ -295,6 +295,30 @@
   text-transform: uppercase;
 }
 
+.drag-ghost {
+  position: fixed;
+  top: -1000px;
+  left: -1000px;
+  z-index: -1;
+  width: 260px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.drag-ghost strong,
+.drag-ghost span {
+  display: block;
+}
+
+.drag-ghost span {
+  margin-top: 4px;
+  color: var(--text-faint);
+  font-size: 0.82rem;
+}
+
 .icon-chip {
   display: inline-flex;
   align-items: center;
