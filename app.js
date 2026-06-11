@@ -943,22 +943,51 @@ function showSchoolentDeclaration(event) {
   const popover = document.createElement("div");
   popover.className = "declaration-popover";
   popover.setAttribute("style", "position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,0);opacity:0;pointer-events:none;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;");
-  popover.innerHTML = `
-    <div class="declaration-card" role="dialog" aria-modal="true" aria-label="Schoolent declaration" style="position:relative;width:min(520px,100%);max-height:calc(100dvh - 96px);overflow-y:auto;box-sizing:border-box;padding:32px;border:1px solid rgba(255,255,255,.42);background:rgba(5,5,5,.98);color:#f7f7f7;display:grid;gap:16px;">
-      <button class="declaration-close" type="button" aria-label="Close" style="position:absolute;top:12px;right:12px;width:36px;height:36px;border:1px solid rgba(255,255,255,.28);background:#050505;color:#fff;cursor:pointer;">×</button>
-      <div class="declaration-body" style="display:grid;gap:14px;padding-right:34px;">
-        <p class="section-label" style="margin:0;color:#f7f7f7;">SCHOOLENT DECLARATION</p>
-        <h3 style="margin:0;font-family:var(--font-serif, serif);font-size:2rem;font-weight:400;color:#fff;">Schoolent</h3>
-        <p class="declaration-copy" style="margin:0;color:#cfcfcf;line-height:1.75;font-size:1rem;">${escapeHtml(schoolentDeclarationText)}</p>
-      </div>
-    </div>
-  `;
+
+  const card = document.createElement("div");
+  card.className = "declaration-card";
+  card.setAttribute("role", "dialog");
+  card.setAttribute("aria-modal", "true");
+  card.setAttribute("aria-label", "Schoolent declaration");
+  card.setAttribute("style", "position:relative;width:min(520px,100%);max-height:calc(100vh - 96px);overflow-y:auto;box-sizing:border-box;padding:32px;border:1px solid rgba(255,255,255,.42);background:#050505;color:#f7f7f7;display:block;");
+
+  const closeButton = document.createElement("button");
+  closeButton.className = "declaration-close";
+  closeButton.type = "button";
+  closeButton.setAttribute("aria-label", "Close");
+  closeButton.setAttribute("style", "position:absolute;top:12px;right:12px;width:36px;height:36px;border:1px solid rgba(255,255,255,.28);background:#050505;color:#fff;cursor:pointer;");
+  closeButton.textContent = "×";
+
+  const label = document.createElement("p");
+  label.className = "section-label";
+  label.setAttribute("style", "margin:0 42px 12px 0;color:#f7f7f7;display:block;");
+  label.textContent = "SCHOOLENT DECLARATION";
+
+  const heading = document.createElement("h3");
+  heading.setAttribute("style", "margin:0 0 14px;font-family:var(--font-serif, serif);font-size:2rem;font-weight:400;color:#fff;display:block;");
+  heading.textContent = "Schoolent";
+
+  const copy = document.createElement("p");
+  copy.className = "declaration-copy";
+  copy.setAttribute("style", "margin:0;color:#d6d6d6;line-height:1.8;font-size:1rem;display:block;white-space:normal;");
+  copy.textContent = schoolentDeclarationText;
+
+  card.append(closeButton, label, heading, copy);
+  popover.append(card);
   document.body.append(popover);
   requestAnimationFrame(() => {
     popover.classList.add("is-visible");
     popover.style.opacity = "1";
     popover.style.pointerEvents = "auto";
     popover.style.background = "rgba(0,0,0,.76)";
+    if (state.isAppShell) {
+      window.setTimeout(() => {
+        const visibleHeight = copy.getBoundingClientRect().height;
+        if (visibleHeight < 24) {
+          window.alert(`Schoolent Declaration\n\n${schoolentDeclarationText}`);
+        }
+      }, 160);
+    }
   });
 
   const close = () => {
