@@ -99,6 +99,8 @@ const socialIcons = {
   default: "•"
 };
 
+const schoolentDeclarationText = "Schoolent 是由KZID的Schoolent开发组创立和运维的标识，旨在为同学们提供学习资源分享、社交交流和项目实践的平台，与KSC完全独立，门户网站的活动和管理与本标识无关。";
+
 const dom = {
   brandName: document.querySelector("#brandName"),
   badge: document.querySelector("#pageBadge"),
@@ -569,19 +571,29 @@ function showSchoolentDeclaration(event) {
 
   const popover = document.createElement("div");
   popover.className = "declaration-popover";
+  popover.setAttribute("style", "position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,0);opacity:0;pointer-events:none;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;");
   popover.innerHTML = `
-    <div class="declaration-card" role="dialog" aria-modal="true" aria-label="Schoolent declaration">
-      <button class="declaration-close" type="button" aria-label="Close">×</button>
-      <p class="section-label">SCHOOLENT DECLARATION</p>
-      <h3>Schoolent</h3>
-      <p>Schoolent 是由KZID的Schoolent开发组创立和运维的标识，旨在为同学们提供学习资源分享、社交交流和项目实践的平台，与KSC完全独立，门户网站的活动和管理与本标识无关。</p>
+    <div class="declaration-card" role="dialog" aria-modal="true" aria-label="Schoolent declaration" style="position:relative;width:min(520px,100%);max-height:calc(100dvh - 96px);overflow-y:auto;box-sizing:border-box;padding:32px;border:1px solid rgba(255,255,255,.42);background:rgba(5,5,5,.98);color:#f7f7f7;display:grid;gap:16px;">
+      <button class="declaration-close" type="button" aria-label="Close" style="position:absolute;top:12px;right:12px;width:36px;height:36px;border:1px solid rgba(255,255,255,.28);background:#050505;color:#fff;cursor:pointer;">×</button>
+      <div class="declaration-body" style="display:grid;gap:14px;padding-right:34px;">
+        <p class="section-label" style="margin:0;color:#f7f7f7;">SCHOOLENT DECLARATION</p>
+        <h3 style="margin:0;font-family:var(--font-serif, serif);font-size:2rem;font-weight:400;color:#fff;">Schoolent</h3>
+        <p class="declaration-copy" style="margin:0;color:#cfcfcf;line-height:1.75;font-size:1rem;">${escapeHtml(schoolentDeclarationText)}</p>
+      </div>
     </div>
   `;
   document.body.append(popover);
-  requestAnimationFrame(() => popover.classList.add("is-visible"));
+  requestAnimationFrame(() => {
+    popover.classList.add("is-visible");
+    popover.style.opacity = "1";
+    popover.style.pointerEvents = "auto";
+    popover.style.background = "rgba(0,0,0,.76)";
+  });
 
   const close = () => {
     popover.classList.remove("is-visible");
+    popover.style.opacity = "0";
+    popover.style.pointerEvents = "none";
     window.setTimeout(() => popover.remove(), 220);
   };
   popover.addEventListener("click", (clickEvent) => {
