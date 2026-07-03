@@ -555,7 +555,7 @@ function renderEditor() {
       <section class="editor-section">
         <h3>底部与社媒</h3>
         <div class="editor-grid">
-          ${inputField("会长邮箱", "footer.presidentEmail", state.content.footer.presidentEmail)}
+          ${inputField("问题上报邮箱", "footer.presidentEmail", state.content.footer.presidentEmail)}
           ${localizedFields("底部声明", "footer.statement", state.content.footer.statement, true)}
         </div>
         <div class="stack-list">
@@ -1178,7 +1178,7 @@ function renderAdminDocs() {
 
         <article class="doc-card">
           <h4>页尾与社媒</h4>
-          <p>会长邮箱、底部声明和社媒链接会同步到首页、Updates、详情页和提案页。链接 URL 必须包含 https:// 或 mailto:。</p>
+          <p>问题上报邮箱、底部声明和社媒链接会同步到首页、Updates、详情页和提案页。链接 URL 必须包含 https:// 或 mailto:。</p>
         </article>
 
         <article class="doc-card">

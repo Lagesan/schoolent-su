@@ -142,12 +142,18 @@ select {
 
 /* 移除原有活泼的弹跳效果，改为严肃的底色反转 */
 .topnav a:hover,
+.topnav a.download-nav-link,
 .ghost-link:hover,
 .button-secondary:hover,
 .social-link:hover {
   background: var(--text);
   color: var(--bg);
   border-color: var(--text);
+}
+
+.topnav a.download-nav-link:hover {
+  background: transparent;
+  color: var(--text);
 }
 
 .lang-switch {
@@ -255,6 +261,148 @@ select {
 .button-secondary {
   background: transparent;
   color: var(--text);
+}
+
+.download-hero {
+  min-height: calc(100dvh - 220px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.45fr);
+  gap: 24px;
+  align-items: stretch;
+  padding-bottom: 34px;
+}
+
+.download-copy,
+.download-panel,
+.download-detail-strip article {
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.download-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(36px, 7vw, 84px);
+}
+
+.download-copy h2 {
+  margin: 18px 0 22px;
+  font-family: var(--font-serif);
+  font-size: clamp(3.2rem, 10vw, 7rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+}
+
+.download-lead {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: clamp(1.05rem, 2vw, 1.24rem);
+  line-height: 1.75;
+}
+
+.download-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 36px;
+}
+
+.download-button {
+  min-width: min(100%, 240px);
+}
+
+.download-note {
+  margin: 18px 0 0;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.download-ios-note {
+  margin: 8px 0 0;
+  color: var(--text-faint);
+  font-size: 0.82rem;
+}
+
+.download-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 32px;
+}
+
+.download-app-mark {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.download-app-mark img {
+  width: min(68%, 220px);
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+}
+
+.download-panel-copy {
+  display: grid;
+  gap: 16px;
+}
+
+.download-point-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.download-point-list li {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--text-muted);
+}
+
+.download-detail-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.download-detail-strip article {
+  padding: 24px;
+}
+
+.download-detail-strip span {
+  display: block;
+  color: var(--text-faint);
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.download-detail-strip strong {
+  display: block;
+  margin-top: 18px;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.download-detail-strip p,
+.download-footer p {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+}
+
+.download-footer {
+  margin-top: 40px;
 }
 
 .hero-panel {
@@ -1394,6 +1542,8 @@ body.is-app-shell .declaration-card {
 @media (max-width: 960px) {
 
   .hero-grid,
+  .download-hero,
+  .download-detail-strip,
   .proposal-grid,
   .publication-grid,
   .finance-number-grid,
@@ -1421,6 +1571,8 @@ body.is-app-shell .declaration-card {
   }
 
   .hero-copy,
+  .download-copy,
+  .download-panel,
   .org-map {
     padding: 32px 24px;
   }
@@ -1450,6 +1602,18 @@ body.is-app-shell .declaration-card {
 
   .hero-title {
     max-width: none;
+  }
+
+  .download-hero {
+    min-height: auto;
+  }
+
+  .download-copy {
+    padding: 36px 24px;
+  }
+
+  .download-app-mark {
+    min-height: 220px;
   }
 }
 

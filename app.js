@@ -12,7 +12,8 @@ const ui = {
       activities: "更新",
       finance: "数据",
       initiatives: "提案",
-      publications: "纪要"
+      publications: "纪要",
+      download: "下载 App"
     },
     labels: {
       organization: "组织关系",
@@ -53,7 +54,7 @@ const ui = {
       loading: "正在加载内容…",
       error: "内容暂时加载失败，请稍后刷新。",
       noItems: "暂时还没有已发布内容。",
-      footerPrefix: "会长邮箱",
+      footerPrefix: "问题上报邮箱",
       updatedAt: "内容更新时间",
       aiReady: "已预留 AI / API 接口扩展位",
       fallback: "当前显示的是默认样板数据。",
@@ -69,7 +70,7 @@ const ui = {
       openActivities: "查看更新",
       openFinance: "财务摘要",
       openProposals: "提案页面",
-      contactPresident: "联系会长",
+      contactPresident: "问题上报",
       sharePortal: "分享门户",
       noBridge: "当前是在浏览器中预览 App 模式，原生能力会在安卓容器里启用。",
       nextActivity: "下一项活动",
@@ -84,7 +85,8 @@ const ui = {
       activities: "Updates",
       finance: "Data",
       initiatives: "Proposals",
-      publications: "Notes"
+      publications: "Notes",
+      download: "Download App"
     },
     labels: {
       organization: "Organization Map",
@@ -125,7 +127,7 @@ const ui = {
       loading: "Loading portal content...",
       error: "Portal data is temporarily unavailable. Please refresh later.",
       noItems: "No published items yet.",
-      footerPrefix: "President Email",
+      footerPrefix: "Issue Report Email",
       updatedAt: "Updated",
       aiReady: "API surface is ready for future AI integrations",
       fallback: "The site is currently showing seeded sample data.",
@@ -141,7 +143,7 @@ const ui = {
       openActivities: "Open Updates",
       openFinance: "Finance Snapshot",
       openProposals: "Proposal Page",
-      contactPresident: "Contact President",
+      contactPresident: "Report Issue",
       sharePortal: "Share Portal",
       noBridge: "You are previewing app mode in a browser. Native capabilities will be available inside the Android container.",
       nextActivity: "Next Activity",

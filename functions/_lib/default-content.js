@@ -241,7 +241,7 @@ export function createDefaultContent() {
       items: []
     },
     footer: {
-      presidentEmail: "president@example.edu",
+      presidentEmail: "report@example.edu",
       statement: localized(
         "透明不是一次性动作，而是一套持续发布、持续回应的工作机制。",
         "Transparency is not a one-off announcement. It is a repeatable publishing and response system."

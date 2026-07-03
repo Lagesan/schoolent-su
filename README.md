@@ -66,6 +66,20 @@ npx wrangler pages dev . --d1 DB=<your-db-name>
 npm run check:js
 ```
 
+## Android APK download
+
+The public homepage includes a small Android app download entry, and `/download/` contains the standalone download page. The primary button calls:
+
+```text
+/api/download/android
+```
+
+Do not place the current APK in the Pages static directory: `schoolent-su-mobile/app/build/outputs/apk/debug/app-debug.apk` is about 66.7 MiB, while Cloudflare Pages has a 25 MiB per-file asset limit. Use one of these deployment options instead:
+
+- Set `ANDROID_APK_URL` to an external HTTPS download URL.
+- Or upload the APK to the bound R2 bucket and set `ANDROID_APK_R2_KEY`.
+- If no key is configured, the function checks `releases/schoolent-android.apk` in R2 by default.
+
 ## 后续可扩展
 
 - 增加“反馈箱 / 提案提交”表单
