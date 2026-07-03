@@ -38,10 +38,24 @@
           <h2>Schoolent App</h2>
           <p class="download-lead">这里用于获取 Schoolent 安卓端的新版安装包。已安装 App 的同学只需要在需要更新时打开这个页面，不必重复寻找下载入口。</p>
           <div class="download-actions">
-            <a class="button button-primary download-button" href="/api/download/android" download="Schoolent-Android-v1.0.apk">获取新版 APK</a>
+            <a class="button button-primary download-button" href="https://gitee.com/lagesan/schoolent-su-mobile/releases/download/v1.0/Schoolent-Android-v1.0.apk" download="Schoolent-Android-v1.0.apk">从 Gitee 获取新版 APK</a>
+          </div>
+          <div class="download-mirror-grid" aria-label="Download mirrors">
+            <a href="https://gitee.com/lagesan/schoolent-su-mobile/releases/download/v1.0/Schoolent-Android-v1.0.apk" download="Schoolent-Android-v1.0.apk">
+              <span>国内节点</span>
+              <strong>Gitee</strong>
+            </a>
+            <a href="https://github.com/Lagesan/schoolent-su-mobile/releases/latest/download/Schoolent-Android-v1.0.apk" download="Schoolent-Android-v1.0.apk">
+              <span>国际节点</span>
+              <strong>GitHub</strong>
+            </a>
+            <a href="/api/download/android" download="Schoolent-Android-v1.0.apk">
+              <span>官网备用</span>
+              <strong>Schoolent</strong>
+            </a>
           </div>
           <p class="download-note">v1.0 · 约 46.7 MB · Android 8.1 及以上</p>
-          <p class="download-ios-note">安卓 App 内访问官网时不会展示下载入口；这个页面仅作为新版安装包入口保留。</p>
+          <p class="download-ios-note">如果 GitHub 无法连接，请优先使用 Gitee；官网备用节点仅用于自动转发。</p>
         </div>
 
         <aside class="download-panel" aria-label="Schoolent app summary">
@@ -79,7 +93,7 @@
     </main>
 
     <footer class="site-footer download-footer">
-      <p>请仅从 schoolent.cn 获取新版安装包。Android 可能会提示“未知来源”，确认来源后继续即可。</p>
+      <p>请优先从本页列出的 Gitee、GitHub 或 Schoolent 节点获取新版安装包。Android 可能会提示“未知来源”，确认来源后继续即可。</p>
     </footer>
   </div>
 </body>

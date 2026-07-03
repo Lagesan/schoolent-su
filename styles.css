@@ -322,6 +322,43 @@ select {
   text-transform: uppercase;
 }
 
+.download-mirror-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 620px;
+  margin-top: 18px;
+}
+
+.download-mirror-grid a {
+  display: grid;
+  gap: 4px;
+  min-height: 76px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: #000;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.download-mirror-grid a:hover {
+  border-color: var(--text);
+  background: #111;
+}
+
+.download-mirror-grid span {
+  color: var(--text-faint);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.download-mirror-grid strong {
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+
 .download-ios-note {
   margin: 8px 0 0;
   color: var(--text-faint);
@@ -1610,6 +1647,10 @@ body.is-app-shell .declaration-card {
 
   .download-copy {
     padding: 36px 24px;
+  }
+
+  .download-mirror-grid {
+    grid-template-columns: 1fr;
   }
 
   .download-app-mark {
