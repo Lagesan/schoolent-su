@@ -6,11 +6,10 @@ const RELEASE_DOWNLOADS = [
   `https://github.com/Lagesan/schoolent-su-mobile/releases/latest/download/${DOWNLOAD_FILENAME}`
 ];
 
-export async function onRequestGet({ env }) {
-  return handleDownload(env);
-}
-
-export async function onRequestHead({ env }) {
+export async function onRequest({ env, request }) {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return textResponse("Method not allowed.", 405);
+  }
   return handleDownload(env);
 }
 
