@@ -1,10 +1,10 @@
 import { securityHeaders } from "../_lib/security.js";
 
-const VERSION_CODE = 2;
-const VERSION_NAME = "1.1";
-const APK_FILENAME = "Schoolent-Android-v1.1.apk";
-const APK_SIZE_BYTES = 46746130;
-const APK_SHA256 = "74a72f42e32eae2506b30345e43741da9b91a733b6d15d4dfc40b9af43a158ff";
+const VERSION_CODE = 3;
+const VERSION_NAME = "1.2";
+const APK_FILENAME = "Schoolent-Android-v1.2.apk";
+const APK_SIZE_BYTES = 46746134;
+const APK_SHA256 = "b9d128c5148e10c8a9e3dcc5068b1174c54efc74fba18ba22e91225947f4dc32";
 
 const DOWNLOADS = [
   {
@@ -32,8 +32,9 @@ export async function onRequestGet() {
       sizeBytes: APK_SIZE_BYTES,
       sha256: APK_SHA256,
       releaseNotes: [
-        "Small update package for validating the in-app updater.",
-        "No feature migration is required from v1.0."
+        "Improves updater interaction responsiveness.",
+        "Prevents repeated download taps from restarting the same APK download.",
+        "Keeps the downloaded APK path stable before installation."
       ],
       downloads: DOWNLOADS
     },
