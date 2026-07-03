@@ -50,7 +50,7 @@ async function pickReachableReleaseUrl() {
   const checks = RELEASE_DOWNLOADS.map(async (url) => {
     try {
       const response = await fetch(url, { method: "HEAD" });
-      if (response.ok || response.status === 302 || response.status === 301) {
+      if ((response.ok || response.status === 302 || response.status === 301) && isApkLikeResponse(response)) {
         return url;
       }
     } catch (error) {
@@ -71,6 +71,18 @@ async function pickReachableReleaseUrl() {
   } catch (error) {
     return null;
   }
+}
+
+function isApkLikeResponse(response) {
+  const contentType = String(response.headers.get("Content-Type") || "").toLowerCase();
+  const contentDisposition = String(response.headers.get("Content-Disposition") || "").toLowerCase();
+  if (contentType.includes("text/html")) {
+    return false;
+  }
+  return contentDisposition.includes(".apk") ||
+    contentType.includes("android.package-archive") ||
+    contentType.includes("application/octet-stream") ||
+    contentType.includes("binary/octet-stream");
 }
 
 function textResponse(message, status) {
