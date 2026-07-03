@@ -66,19 +66,20 @@ npx wrangler pages dev . --d1 DB=<your-db-name>
 npm run check:js
 ```
 
-## Android APK download
+## Android APK update
 
-The public homepage includes a small Android app download entry, and `/download/` contains the standalone download page. The primary button calls:
+The public homepage uses a small App update entry, and `/download/` contains the standalone update/download page for Android packages. Inside the Android app, this should be treated as an update path, not a first-time download prompt. The primary button calls:
 
 ```text
 /api/download/android
 ```
 
-Do not place the current APK in the Pages static directory: `schoolent-su-mobile/app/build/outputs/apk/debug/app-debug.apk` is about 66.7 MiB, while Cloudflare Pages has a 25 MiB per-file asset limit. Use one of these deployment options instead:
+Do not place the current APK in the Pages static directory: `schoolent-su-mobile/app/build/outputs/apk/release/app-release.apk` is about 46.7 MB, while Cloudflare Pages has a 25 MB per-file asset limit. Use one of these deployment options instead:
 
-- Set `ANDROID_APK_URL` to an external HTTPS download URL.
-- Or upload the APK to the bound R2 bucket and set `ANDROID_APK_R2_KEY`.
-- If no key is configured, the function checks `releases/schoolent-android.apk` in R2 by default.
+- Upload the APK and `schoolent-update.json` to both GitHub Releases and Gitee Releases.
+- `/api/app-update` exposes a lightweight fallback manifest for the app updater.
+- `/api/download/android` now redirects to the first reachable GitHub/Gitee Release asset by default.
+- R2 is no longer the default APK source. Only set `ANDROID_APK_R2_KEY` if you intentionally need a temporary fallback.
 
 ## 后续可扩展
 

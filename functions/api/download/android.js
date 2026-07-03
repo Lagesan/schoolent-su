@@ -1,8 +1,11 @@
 import { hasBucket } from "../../_lib/r2.js";
 import { attachmentDisposition, securityHeaders } from "../../_lib/security.js";
 
-const DEFAULT_R2_KEY = "releases/schoolent-android.apk";
 const DOWNLOAD_FILENAME = "Schoolent-Android-v1.0.apk";
+const RELEASE_DOWNLOADS = [
+  `https://github.com/Lagesan/schoolent-su-mobile/releases/latest/download/${DOWNLOAD_FILENAME}`,
+  `https://gitee.com/lagesan/schoolent-su-mobile/releases/download/v1.0/${DOWNLOAD_FILENAME}`
+];
 
 export async function onRequestGet({ env }) {
   const externalUrl = String(env?.ANDROID_APK_URL || "").trim();
@@ -17,7 +20,12 @@ export async function onRequestGet({ env }) {
     }
   }
 
-  const r2Key = String(env?.ANDROID_APK_R2_KEY || DEFAULT_R2_KEY).trim();
+  const releaseUrl = await pickReachableReleaseUrl();
+  if (releaseUrl) {
+    return Response.redirect(releaseUrl, 302);
+  }
+
+  const r2Key = String(env?.ANDROID_APK_R2_KEY || "").trim();
   if (r2Key && hasBucket(env)) {
     const object = await env.R2.get(r2Key);
     if (object) {
@@ -36,6 +44,33 @@ export async function onRequestGet({ env }) {
   }
 
   return textResponse("Android package is not configured.", 404);
+}
+
+async function pickReachableReleaseUrl() {
+  const checks = RELEASE_DOWNLOADS.map(async (url) => {
+    try {
+      const response = await fetch(url, { method: "HEAD" });
+      if (response.ok || response.status === 302 || response.status === 301) {
+        return url;
+      }
+    } catch (error) {
+      return null;
+    }
+    return null;
+  });
+
+  try {
+    return await Promise.any(
+      checks.map((check) =>
+        check.then((url) => {
+          if (!url) throw new Error("release url unavailable");
+          return url;
+        })
+      )
+    );
+  } catch (error) {
+    return null;
+  }
 }
 
 function textResponse(message, status) {

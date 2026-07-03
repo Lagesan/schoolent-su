@@ -13,7 +13,7 @@ const ui = {
       finance: "数据",
       initiatives: "提案",
       publications: "纪要",
-      download: "下载 App"
+      download: "App 更新"
     },
     labels: {
       organization: "组织关系",
@@ -86,7 +86,7 @@ const ui = {
       finance: "Data",
       initiatives: "Proposals",
       publications: "Notes",
-      download: "Download App"
+      download: "App Update"
     },
     labels: {
       organization: "Organization Map",
@@ -333,7 +333,7 @@ function renderAppModeHub(content, language, meta) {
   const hasBridge = hasNativeBridge();
   const appVersion = readAppVersion();
   const spotlightTitle = pick(latestUpdate?.title) || pick(nextActivity?.title) || pick(latestProposal?.title) || "";
-  const spotlightMeta = latestUpdate ? `Update Â· ${formatDate(latestUpdate.date)}` : nextActivity
+  const spotlightMeta = latestUpdate ? `Update · ${formatDate(latestUpdate.date)}` : nextActivity
     ? `${language.app.nextActivity} · ${formatDate(nextActivity.date)}`
     : latestProposal
       ? `${language.app.latestProposal} · ${pick(latestProposal.owner)}`
