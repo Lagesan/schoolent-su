@@ -49,7 +49,7 @@ async function pickReachableReleaseUrl() {
   const checks = RELEASE_DOWNLOADS.map(async (url) => {
     try {
       const response = await fetch(url, { method: "HEAD" });
-      if ((response.ok || response.status === 302 || response.status === 301) && isApkLikeResponse(response)) {
+      if (response.ok && isApkLikeResponse(response)) {
         return url;
       }
     } catch (error) {
