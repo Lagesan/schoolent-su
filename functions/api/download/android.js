@@ -3,8 +3,7 @@ import { attachmentDisposition, securityHeaders } from "../../_lib/security.js";
 
 const DOWNLOAD_FILENAME = "Schoolent-Android-v1.0.apk";
 const RELEASE_DOWNLOADS = [
-  `https://github.com/Lagesan/schoolent-su-mobile/releases/latest/download/${DOWNLOAD_FILENAME}`,
-  `https://gitee.com/lagesan/schoolent-su-mobile/releases/download/v1.0/${DOWNLOAD_FILENAME}`
+  `https://github.com/Lagesan/schoolent-su-mobile/releases/latest/download/${DOWNLOAD_FILENAME}`
 ];
 
 export async function onRequestGet({ env }) {
