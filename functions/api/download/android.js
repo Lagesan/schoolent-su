@@ -12,7 +12,9 @@ export async function onRequestGet({ env }) {
     try {
       const url = new URL(externalUrl);
       if (url.protocol === "https:" || url.protocol === "http:") {
-        return Response.redirect(url.toString(), 302);
+        if (await isReachableApkUrl(url.toString())) {
+          return Response.redirect(url.toString(), 302);
+        }
       }
     } catch (error) {
       return textResponse("ANDROID_APK_URL is not a valid URL.", 500);
@@ -45,11 +47,19 @@ export async function onRequestGet({ env }) {
   return textResponse("Android package is not configured.", 404);
 }
 
+async function isReachableApkUrl(url) {
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+    return response.ok && isApkLikeResponse(response);
+  } catch (error) {
+    return false;
+  }
+}
+
 async function pickReachableReleaseUrl() {
   const checks = RELEASE_DOWNLOADS.map(async (url) => {
     try {
-      const response = await fetch(url, { method: "HEAD" });
-      if (response.ok && isApkLikeResponse(response)) {
+      if (await isReachableApkUrl(url)) {
         return url;
       }
     } catch (error) {
