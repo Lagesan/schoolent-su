@@ -4,7 +4,7 @@ const VERSION_CODE = 1;
 const VERSION_NAME = "1.0";
 const APK_FILENAME = "Schoolent-Android-v1.0.apk";
 const APK_SIZE_BYTES = 46746134;
-const APK_SHA256 = "fc0071c01279f63e7eefde6d25afcb4817e62bef09ed832eb3f66a90960d3f0c";
+const APK_SHA256 = "526faa549083b23b23d115a9182cc0cd369fdf07ccdca29b6002f02e817f5c66";
 
 const DOWNLOADS = [
   {

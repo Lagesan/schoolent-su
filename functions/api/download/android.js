@@ -74,9 +74,13 @@ async function pickReachableReleaseUrl() {
 }
 
 function isApkLikeResponse(response) {
+  const finalUrl = String(response.url || "");
   const contentType = String(response.headers.get("Content-Type") || "").toLowerCase();
   const contentDisposition = String(response.headers.get("Content-Disposition") || "").toLowerCase();
   if (contentType.includes("text/html")) {
+    return false;
+  }
+  if (finalUrl && !finalUrl.includes(".apk") && !contentDisposition.includes(".apk")) {
     return false;
   }
   return contentDisposition.includes(".apk") ||
