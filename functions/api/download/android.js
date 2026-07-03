@@ -7,6 +7,14 @@ const RELEASE_DOWNLOADS = [
 ];
 
 export async function onRequestGet({ env }) {
+  return handleDownload(env);
+}
+
+export async function onRequestHead({ env }) {
+  return handleDownload(env);
+}
+
+async function handleDownload(env) {
   const externalUrl = String(env?.ANDROID_APK_URL || "").trim();
   if (externalUrl) {
     try {
