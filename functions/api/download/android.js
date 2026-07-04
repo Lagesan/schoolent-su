@@ -1,7 +1,7 @@
 import { hasBucket } from "../../_lib/r2.js";
 import { attachmentDisposition, securityHeaders } from "../../_lib/security.js";
 
-const DOWNLOAD_FILENAME = "Schoolent-Android-v1.3.apk";
+const DOWNLOAD_FILENAME = "Schoolent-Android-v1.4.apk";
 const RELEASE_DOWNLOADS = [
   `https://github.com/Lagesan/schoolent-su-mobile/releases/latest/download/${DOWNLOAD_FILENAME}`
 ];

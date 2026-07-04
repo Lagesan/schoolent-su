@@ -1,10 +1,10 @@
 import { securityHeaders } from "../_lib/security.js";
 
-const VERSION_CODE = 4;
-const VERSION_NAME = "1.3";
-const APK_FILENAME = "Schoolent-Android-v1.3.apk";
+const VERSION_CODE = 5;
+const VERSION_NAME = "1.4";
+const APK_FILENAME = "Schoolent-Android-v1.4.apk";
 const APK_SIZE_BYTES = 46746134;
-const APK_SHA256 = "6583c04ca8386608aeb16d2e3c1838360a5390d4ce407cf201d3e0f1ec0e0c38";
+const APK_SHA256 = "a5528d447210da8dbca4e5ef614d90a875606ca54888d4c07bbcd72cce94044b";
 
 const DOWNLOADS = [
   {
@@ -32,9 +32,9 @@ export async function onRequestGet() {
       sizeBytes: APK_SIZE_BYTES,
       sha256: APK_SHA256,
       releaseNotes: [
-        "Improves Home, Updates, and Proposals tab switching by keeping loaded web pages alive.",
-        "Reduces repeated loading when entering the Me page.",
-        "Uses WebView caching more effectively for faster app navigation."
+        "Fixes occasional web page scaling and cropping after switching tabs.",
+        "Keeps retained web tabs at full layout size while hidden to preserve viewport state.",
+        "Prevents hidden web tabs from handling the Android back button."
       ],
       downloads: DOWNLOADS
     },
