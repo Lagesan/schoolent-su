@@ -1,10 +1,10 @@
 import { securityHeaders } from "../_lib/security.js";
 
-const VERSION_CODE = 3;
-const VERSION_NAME = "1.2";
-const APK_FILENAME = "Schoolent-Android-v1.2.apk";
+const VERSION_CODE = 4;
+const VERSION_NAME = "1.3";
+const APK_FILENAME = "Schoolent-Android-v1.3.apk";
 const APK_SIZE_BYTES = 46746134;
-const APK_SHA256 = "b9d128c5148e10c8a9e3dcc5068b1174c54efc74fba18ba22e91225947f4dc32";
+const APK_SHA256 = "6583c04ca8386608aeb16d2e3c1838360a5390d4ce407cf201d3e0f1ec0e0c38";
 
 const DOWNLOADS = [
   {
@@ -28,13 +28,13 @@ export async function onRequestGet() {
       versionName: VERSION_NAME,
       minSupportedVersionCode: 1,
       mandatory: false,
-      releaseDate: "2026-07-03",
+      releaseDate: "2026-07-04",
       sizeBytes: APK_SIZE_BYTES,
       sha256: APK_SHA256,
       releaseNotes: [
-        "Improves updater interaction responsiveness.",
-        "Prevents repeated download taps from restarting the same APK download.",
-        "Keeps the downloaded APK path stable before installation."
+        "Improves Home, Updates, and Proposals tab switching by keeping loaded web pages alive.",
+        "Reduces repeated loading when entering the Me page.",
+        "Uses WebView caching more effectively for faster app navigation."
       ],
       downloads: DOWNLOADS
     },
