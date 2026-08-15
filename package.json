@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler pages dev .",
     "deploy": "wrangler pages deploy .",
-    "check:js": "node --check app.js && node --check content-pages.js && node --check admin/admin.js"
+    "check:js": "node --check app.js && node --check content-pages.js && node --check download/download.js && node --check admin/admin.js && node --check functions/_lib/content-storage.js && node --check functions/_lib/db.js"
   },
   "devDependencies": {
     "wrangler": "^4.12.0"

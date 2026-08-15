@@ -10,20 +10,25 @@
   <meta name="description"
     content="A bilingual transparency portal for student council governance, activities, and public reporting." />
   <link rel="icon" type="image/png" href="/assets/schoolent-icon.png" />
-  <link rel="stylesheet" href="/styles.css?v=20260611-declaration3" />
+  <link rel="stylesheet" href="/styles.css?v=20260815-ui1" />
 </head>
 
 <body>
+  <a class="skip-link" href="#top">跳至主要内容 / Skip to content</a>
   <div class="page-shell">
-    <header class="topbar">
+    <header class="topbar portal-topbar" id="siteHeader">
       <a class="brand" href="#top" aria-label="Student Council Transparency Portal home">
         <img class="brand-mark" src="/assets/Kunzhong.jpeg" alt="Kunzhong logo" />
         <div>
           <p class="brand-kicker">STUDENT COUNCIL</p>
-          <h1 id="brandName">Transparency Portal</h1>
+          <h1 id="brandName">KSC</h1>
         </div>
       </a>
-      <div class="topbar-actions">
+      <button class="menu-toggle" id="menuToggle" type="button" aria-controls="topbarActions" aria-expanded="false">
+        <span class="menu-toggle-icon" aria-hidden="true"><span></span><span></span></span>
+        <span data-menu-label>导航</span>
+      </button>
+      <div class="topbar-actions" id="topbarActions">
         <nav class="topnav" aria-label="Primary">
           <a href="#organization" data-nav="organization">架构</a>
           <a href="#activities" data-nav="activities">活动</a>
@@ -46,8 +51,8 @@
         <section class="hero-grid">
           <div class="hero-copy">
             <p class="section-label" id="heroBadge">CAMPAIGN PLATFORM</p>
-          <h2 class="hero-title" id="heroTitle">Loading...</h2>
-          <p class="hero-subtitle" id="heroSubtitle"></p>
+          <h2 class="hero-title" id="heroTitle">高效，及时，透明。</h2>
+          <p class="hero-subtitle" id="heroSubtitle">组织结构、活动进度与公开信息集中呈现。</p>
           <p class="hero-promise" id="heroPromise"></p>
           <div class="hero-actions">
             <a class="button button-primary" href="#finance" id="primaryAction">透明公开</a>
@@ -56,13 +61,22 @@
         </div>
         <aside class="hero-panel">
           <div class="panel-frame">
-            <p class="panel-label" id="siteTagline">Public governance, published clearly.</p>
-            <dl class="metric-grid" id="metricGrid"></dl>
+            <p class="panel-label" id="siteTagline">正在同步公开记录</p>
+            <div class="sync-state" id="syncState" hidden>
+              <span data-sync-message role="status" aria-live="polite"></span>
+              <button class="sync-retry" type="button" data-sync-retry hidden>重试</button>
+            </div>
+            <dl class="metric-grid" id="metricGrid" aria-busy="true">
+              <div class="metric-item metric-item-loading">
+                <dt>PUBLIC RECORD</dt>
+                <dd><span class="sync-indicator">SYNCING</span></dd>
+              </div>
+            </dl>
           </div>
         </aside>
       </section>
 
-      <section class="notice-strip" id="noticeStrip" hidden></section>
+      <section class="notice-strip" id="noticeStrip" aria-live="polite" hidden></section>
 
       <section class="content-section" id="organization">
         <div class="section-header">
@@ -108,14 +122,12 @@
     <footer class="site-footer" id="siteFooter"></footer>
   </div>
 
-  <template id="emptyStateTemplate">
-    <div class="empty-state">
-      <p class="empty-title">No published items yet.</p>
-      <p class="empty-copy">This module is ready for updates from the admin panel.</p>
-    </div>
-  </template>
+  <a class="back-to-top" id="backToTop" href="#top" aria-label="返回顶部" hidden>
+    <span aria-hidden="true">↑</span>
+  </a>
+  <div class="action-status" id="actionStatus" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
-  <script type="module" src="/app.js?v=20260611-declaration3"></script>
+  <script type="module" src="/app.js?v=20260815-ui1"></script>
 </body>
 
 </html>

@@ -3,7 +3,11 @@ const state = {
   meta: null,
   authenticated: false,
   view: "editor",
-  dirty: false
+  dirty: false,
+  editRevision: 0,
+  saving: false,
+  pendingUploads: new Set(),
+  conflict: null
 };
 
 const dom = {
@@ -56,6 +60,7 @@ const factories = {
     published: true
   }),
   "updates.items": () => ({
+    id: createLocalId("update"),
     title: { zh: "", en: "" },
     date: new Date().toISOString(),
     tag: "UPDATE",
@@ -101,7 +106,7 @@ window.addEventListener("beforeunload", handleBeforeUnload);
 init();
 
 async function init() {
-  setStatus("Checking session...", "warn");
+  setStatus("正在检查登录状态…", "warn");
 
   try {
     const response = await fetch("/api/admin/session");
@@ -139,10 +144,11 @@ function renderLogin() {
       </div>
     </form>
   `;
+  window.requestAnimationFrame(() => dom.loginPanel.querySelector('input[name="password"]')?.focus());
 }
 
 async function loadEditor() {
-  setStatus("Loading editable content...", "warn");
+  setStatus("正在加载可编辑内容…", "warn");
 
   try {
     const response = await fetch("/api/admin/content");
@@ -154,6 +160,10 @@ async function loadEditor() {
     state.content = payload.content;
     state.meta = payload.meta;
     state.dirty = false;
+    state.editRevision = 0;
+    state.saving = false;
+    state.pendingUploads.clear();
+    state.conflict = null;
     renderEditor();
     setStatus("后台已连接，可以编辑并发布。", "ok");
   } catch (error) {
@@ -180,10 +190,10 @@ function renderEditor() {
 
   dom.editorPanel.innerHTML = `
     <div class="editor-layout">
-      <div class="editor-toolbar">
+      <div class="editor-toolbar" data-dirty="${state.dirty}">
         <button class="button ${state.view === "editor" ? "button-primary" : "button-secondary"}" type="button" data-action="switch-view" data-view="editor">编辑内容</button>
         <button class="button ${state.view === "docs" ? "button-primary" : "button-secondary"}" type="button" data-action="switch-view" data-view="docs">操作文档</button>
-        <button class="button button-primary" type="button" data-action="save">保存并发布</button>
+        <button class="button button-primary" type="button" data-action="save" ${canSaveContent() ? "" : "disabled"}>保存并发布</button>
         <button class="button button-secondary" type="button" data-action="export">导出离线包</button>
         <a class="button button-secondary" href="/" target="_blank" rel="noreferrer">打开前台</a>
         <button class="button button-plain" type="button" data-action="logout">退出登录</button>
@@ -428,7 +438,7 @@ function renderEditor() {
                       ${localizedFields("摘要", `updates.items[${index}].summary`, item.summary, true)}
                     </div>
                     ${richTextFields("正文", `updates.items[${index}].body`, item.body)}
-                    ${attachmentEditor(index, item.attachments || [])}
+                    ${attachmentEditor(index, item.id, item.attachments || [])}
                     <div class="row-actions">
                       <button class="button button-danger" type="button" data-action="remove" data-array-path="updates.items" data-index="${index}">删除 Update</button>
                     </div>
@@ -788,8 +798,10 @@ function syncPeopleModelForSave() {
 async function handleLoginSubmit(event) {
   event.preventDefault();
 
+  const submitButton = event.currentTarget.querySelector('button[type="submit"]');
   const form = new FormData(event.target);
   const password = String(form.get("password") || "");
+  setButtonBusy(submitButton, true, "正在登录…");
   setStatus("正在登录...", "warn");
 
   try {
@@ -811,13 +823,15 @@ async function handleLoginSubmit(event) {
   } catch (error) {
     console.error(error);
     setStatus(error.message || "登录失败", "error");
+  } finally {
+    setButtonBusy(submitButton, false);
   }
 }
 
 function handleFieldInput(event) {
   const target = event.target;
   if (target.matches("[data-upload-input]") && target.files?.length) {
-    uploadAttachment(Number(target.dataset.uploadInput), target.files[0]);
+    uploadAttachment(target.dataset.updateId, target.files[0], target);
     target.value = "";
     return;
   }
@@ -863,6 +877,13 @@ async function handleEditorClick(event) {
   }
 
   if (action === "remove") {
+    if (button.dataset.arrayPath === "updates.items") {
+      const pendingUpdate = state.content.updates.items[Number(button.dataset.index)];
+      if (pendingUpdate?.id && state.pendingUploads.has(pendingUpdate.id)) {
+        setStatus("这条 Update 正在上传附件，请等待上传完成后再删除。", "warn");
+        return;
+      }
+    }
     if (!confirmDestructive("确定删除这一项吗？删除后需要保存并发布才会影响前台。")) {
       return;
     }
@@ -933,8 +954,9 @@ async function handleEditorClick(event) {
   }
 
   if (action === "upload-attachment") {
-    const updateIndex = Number(button.dataset.updateIndex);
-    const input = dom.editorPanel.querySelector(`[data-upload-input="${updateIndex}"]`);
+    const updateId = button.dataset.updateId;
+    const input = [...dom.editorPanel.querySelectorAll("[data-upload-input]")]
+      .find((item) => item.dataset.updateId === updateId);
     input?.click();
     return;
   }
@@ -955,6 +977,10 @@ async function handleEditorClick(event) {
   }
 
   if (action === "logout") {
+    if (state.pendingUploads.size) {
+      setStatus("请等待附件上传完成后再退出登录。", "warn");
+      return;
+    }
     if (state.dirty && !confirmDestructive("当前有未保存更改，确定退出登录吗？")) {
       return;
     }
@@ -969,7 +995,7 @@ function handleEditorMouseDown(event) {
 }
 
 function handleBeforeUnload(event) {
-  if (!state.dirty) {
+  if (!state.dirty && !state.pendingUploads.size) {
     return;
   }
 
@@ -1038,31 +1064,79 @@ function setCompactDragImage(event, source) {
 }
 
 async function saveContent() {
+  if (state.pendingUploads.size) {
+    syncEditorActionState();
+    setStatus("请等待所有附件上传完成后再保存并发布。", "warn");
+    return;
+  }
+
+  if (!state.dirty || state.saving) {
+    return;
+  }
+
+  if (state.conflict && !confirmDestructive(
+    "检测到另一窗口已经发布了新内容。确定要用当前编辑内容覆盖该版本吗？建议先复核本地修改。"
+  )) {
+    setStatus("已取消覆盖；本地修改仍完整保留。", "warn");
+    return;
+  }
+
+  const saveButton = dom.editorPanel.querySelector('[data-action="save"]');
+  state.saving = true;
+  setButtonBusy(saveButton, true, "正在发布…");
+  syncEditorActionState();
   setStatus("正在保存并发布...", "warn");
-  syncPeopleModelForSave();
 
   try {
+    syncPeopleModelForSave();
+    const revisionAtStart = state.editRevision;
+    const requestBody = JSON.stringify({
+      content: state.content,
+      expectedUpdatedAt: state.conflict?.updatedAt || state.meta?.updatedAt
+    });
     const response = await fetch("/api/admin/content", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ content: state.content })
+      body: requestBody
     });
 
     const payload = await response.json();
+    if (response.status === 409 && payload.code === "CONTENT_CONFLICT") {
+      state.conflict = {
+        updatedAt: payload.meta?.updatedAt || state.conflict?.updatedAt || state.meta?.updatedAt
+      };
+      state.dirty = true;
+      setStatus(
+        "另一窗口已发布新版本；你的本地修改仍保留。复核后再次点击“保存并发布”可确认是否覆盖。",
+        "warn"
+      );
+      return;
+    }
     if (!response.ok || !payload.ok) {
       throw new Error(payload.error || "保存失败");
     }
 
-    state.content = payload.content;
     state.meta = payload.meta;
-    state.dirty = false;
-    renderEditor();
-    setStatus("内容已发布到前台。", "ok");
+    state.conflict = null;
+    if (state.editRevision === revisionAtStart) {
+      state.content = payload.content;
+      state.dirty = false;
+      renderEditor();
+      setStatus("内容已发布到前台。", "ok");
+    } else {
+      state.dirty = true;
+      dom.editorPanel.querySelector("[data-dirty-state]")?.replaceChildren("有未保存更改");
+      setStatus("保存时的版本已发布；发布期间的新修改仍未保存。", "warn");
+    }
   } catch (error) {
     console.error(error);
     setStatus(error.message || "保存失败", "error");
+  } finally {
+    state.saving = false;
+    setButtonBusy(saveButton, false);
+    syncEditorActionState();
   }
 }
 
@@ -1081,11 +1155,23 @@ function applyRichCommand(button) {
   document.execCommand(command, false, value);
 }
 
-async function uploadAttachment(updateIndex, file) {
-  if (!file) {
+async function uploadAttachment(updateId, file, input = null) {
+  if (!file || !updateId) {
     return;
   }
 
+  if (state.saving) {
+    setStatus("内容正在发布，请等待发布完成后再上传附件。", "warn");
+    return;
+  }
+
+  if (state.pendingUploads.has(updateId)) {
+    setStatus("这条 Update 已有附件正在上传。", "warn");
+    return;
+  }
+
+  state.pendingUploads.add(updateId);
+  syncEditorActionState();
   setStatus("正在上传附件到 R2...", "warn");
   const form = new FormData();
   form.append("file", file);
@@ -1100,13 +1186,21 @@ async function uploadAttachment(updateIndex, file) {
       throw new Error(payload.error || "附件上传失败");
     }
 
-    state.content.updates.items[updateIndex].attachments.push(payload.asset);
+    const targetUpdate = state.content.updates.items.find((item) => item.id === updateId);
+    if (!targetUpdate) {
+      throw new Error("原 Update 已不存在，附件未加入内容；请联系管理员清理未引用文件。");
+    }
+    targetUpdate.attachments ||= [];
+    targetUpdate.attachments.push(payload.asset);
     markDirty();
     renderEditor();
     setStatus("附件已上传并加入当前 Update。", "ok");
   } catch (error) {
     console.error(error);
     setStatus(error.message || "附件上传失败", "error");
+  } finally {
+    state.pendingUploads.delete(updateId);
+    syncEditorActionState();
   }
 }
 
@@ -1120,6 +1214,10 @@ async function logout() {
     state.content = null;
     state.meta = null;
     state.dirty = false;
+    state.editRevision = 0;
+    state.saving = false;
+    state.pendingUploads.clear();
+    state.conflict = null;
     renderLogin();
     setStatus("已退出登录。", "warn");
   }
@@ -1235,26 +1333,29 @@ function richTextField(label, path, value) {
     <section class="rich-field">
       <div class="rich-head">
         <span>${escapeHtml(label)}</span>
-        <div class="rich-toolbar">
-          <button type="button" data-action="rich-command" data-command="formatBlock" data-value="h3">H</button>
-          <button type="button" data-action="rich-command" data-command="bold">B</button>
-          <button type="button" data-action="rich-command" data-command="italic">I</button>
-          <button type="button" data-action="rich-command" data-command="insertUnorderedList">UL</button>
-          <button type="button" data-action="rich-command" data-command="createLink">Link</button>
+        <div class="rich-toolbar" role="toolbar" aria-label="${escapeHtml(label)}格式工具">
+          <button type="button" aria-label="三级标题" title="三级标题" data-action="rich-command" data-command="formatBlock" data-value="h3">H</button>
+          <button type="button" aria-label="粗体" title="粗体" data-action="rich-command" data-command="bold">B</button>
+          <button type="button" aria-label="斜体" title="斜体" data-action="rich-command" data-command="italic">I</button>
+          <button type="button" aria-label="无序列表" title="无序列表" data-action="rich-command" data-command="insertUnorderedList">UL</button>
+          <button type="button" aria-label="插入链接" title="插入链接" data-action="rich-command" data-command="createLink">Link</button>
         </div>
       </div>
-      <div class="rich-editor" contenteditable="true" data-rich-path="${escapeHtml(path)}">${value || ""}</div>
+      <div class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${escapeHtml(label)}" data-rich-path="${escapeHtml(path)}">${value || ""}</div>
     </section>
   `;
 }
 
-function attachmentEditor(updateIndex, attachments) {
+function attachmentEditor(updateIndex, updateId, attachments) {
+  const safeUpdateId = escapeHtml(updateId || "");
+  const uploadPending = state.pendingUploads.has(updateId);
+  const uploadDisabled = state.saving || uploadPending;
   return `
     <section class="attachment-editor">
       <div class="list-header">
         <strong>附件 / R2 对象</strong>
-        <button class="button button-secondary" type="button" data-action="upload-attachment" data-update-index="${updateIndex}">上传附件</button>
-        <input type="file" data-upload-input="${updateIndex}" hidden />
+        <button class="button button-secondary" type="button" data-action="upload-attachment" data-update-id="${safeUpdateId}" ${uploadDisabled ? "disabled" : ""} ${uploadPending ? 'aria-busy="true"' : ""}>${uploadPending ? "正在上传…" : "上传附件"}</button>
+        <input type="file" data-upload-input data-update-id="${safeUpdateId}" ${uploadDisabled ? "disabled" : ""} ${uploadPending ? 'aria-busy="true"' : ""} hidden />
       </div>
       <div class="stack-list">
         ${attachments.length
@@ -1359,9 +1460,65 @@ function setStatus(message, tone = "warn") {
   dom.status.textContent = message;
 }
 
+function setButtonBusy(button, busy, busyLabel = "") {
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+
+  if (busy) {
+    if (!button.dataset.idleLabel) {
+      button.dataset.idleLabel = button.textContent;
+    }
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    if (busyLabel) {
+      button.textContent = busyLabel;
+    }
+    return;
+  }
+
+  button.disabled = false;
+  button.removeAttribute("aria-busy");
+  if (button.dataset.idleLabel) {
+    button.textContent = button.dataset.idleLabel;
+    delete button.dataset.idleLabel;
+  }
+}
+
 function markDirty() {
   state.dirty = true;
+  state.editRevision += 1;
   dom.editorPanel.querySelector("[data-dirty-state]")?.replaceChildren("有未保存更改");
+  dom.editorPanel.querySelector(".editor-toolbar")?.setAttribute("data-dirty", "true");
+  syncEditorActionState();
+}
+
+function canSaveContent() {
+  return state.dirty && !state.saving && state.pendingUploads.size === 0;
+}
+
+function syncEditorActionState() {
+  const saveButton = dom.editorPanel.querySelector('[data-action="save"]');
+  if (saveButton instanceof HTMLButtonElement) {
+    saveButton.disabled = !canSaveContent();
+    if (!state.saving) {
+      saveButton.removeAttribute("aria-busy");
+    }
+  }
+
+  dom.editorPanel.querySelectorAll('[data-action="upload-attachment"], [data-upload-input]')
+    .forEach((control) => {
+      const uploadPending = state.pendingUploads.has(control.dataset.updateId);
+      control.disabled = state.saving || uploadPending;
+      if (uploadPending) {
+        control.setAttribute("aria-busy", "true");
+      } else {
+        control.removeAttribute("aria-busy");
+      }
+      if (control.matches('[data-action="upload-attachment"]')) {
+        control.textContent = uploadPending ? "正在上传…" : "上传附件";
+      }
+    });
 }
 
 function confirmDestructive(message) {

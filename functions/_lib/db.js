@@ -1,12 +1,13 @@
 import { createDefaultContent, normalizeContent } from "./default-content.js";
 import {
-  deleteStaleUpdateAttachments,
+  deleteLongTextRevision,
   dehydrateLongTextFields,
   hydrateLongTextFields,
   needsContentStorageMigration
 } from "./content-storage.js";
 
 const RECORD_ID = "portal";
+export const CONTENT_CONFLICT_CODE = "CONTENT_CONFLICT";
 const SCHEMA =
   "CREATE TABLE IF NOT EXISTS content_store (id TEXT PRIMARY KEY, content_json TEXT NOT NULL, updated_at TEXT NOT NULL);";
 
@@ -62,7 +63,7 @@ export async function getContentRecord(env) {
   };
 }
 
-export async function saveContentRecord(env, content) {
+export async function saveContentRecord(env, content, { expectedUpdatedAt = "" } = {}) {
   if (!hasDatabase(env)) {
     throw new Error("D1 binding `DB` is not configured.");
   }
@@ -70,20 +71,44 @@ export async function saveContentRecord(env, content) {
   await ensureDatabase(env);
 
   const normalized = normalizeContent(content);
-  const stored = await dehydrateLongTextFields(env, normalized);
-  const updatedAt = new Date().toISOString();
-  await env.DB.prepare(
-    `
-      INSERT INTO content_store (id, content_json, updated_at)
-      VALUES (?1, ?2, ?3)
-      ON CONFLICT(id) DO UPDATE SET
-        content_json = excluded.content_json,
-        updated_at = excluded.updated_at
-    `
-  )
-    .bind(RECORD_ID, JSON.stringify(stored), updatedAt)
-    .run();
-  await deleteStaleUpdateAttachments(env, normalized);
+  const storageRevision = crypto.randomUUID();
+  const stored = await dehydrateLongTextFields(env, normalized, { storageRevision });
+  const updatedAt = nextUpdatedAt(expectedUpdatedAt);
+  if (expectedUpdatedAt) {
+    const result = await env.DB.prepare(
+      `
+        UPDATE content_store
+        SET content_json = ?2, updated_at = ?3
+        WHERE id = ?1 AND updated_at = ?4
+      `
+    )
+      .bind(RECORD_ID, JSON.stringify(stored), updatedAt, expectedUpdatedAt)
+      .run();
+
+    if (Number(result?.meta?.changes || 0) !== 1) {
+      await discardUncommittedRevision(env, storageRevision);
+      const error = new Error("Content changed after this editor session loaded.");
+      error.code = CONTENT_CONFLICT_CODE;
+      throw error;
+    }
+  } else {
+    await env.DB.prepare(
+      `
+        INSERT INTO content_store (id, content_json, updated_at)
+        VALUES (?1, ?2, ?3)
+        ON CONFLICT(id) DO UPDATE SET
+          content_json = excluded.content_json,
+          updated_at = excluded.updated_at
+      `
+    )
+      .bind(RECORD_ID, JSON.stringify(stored), updatedAt)
+      .run();
+  }
+
+  // Keep committed R2 objects immutable. Deleting older text revisions or
+  // unreferenced attachments here can race active readers, concurrent saves,
+  // and uploads from another admin tab. A retention-aware maintenance job can
+  // collect confirmed orphans later without putting published content at risk.
 
   return {
     content: normalized,
@@ -97,7 +122,8 @@ async function ensureDatabase(env) {
 
 async function initializeContentRecord(env) {
   const seeded = normalizeContent(createDefaultContent());
-  const stored = await dehydrateLongTextFields(env, seeded);
+  const storageRevision = crypto.randomUUID();
+  const stored = await dehydrateLongTextFields(env, seeded, { storageRevision });
   const updatedAt = new Date().toISOString();
 
   await env.DB.prepare(
@@ -116,4 +142,20 @@ async function initializeContentRecord(env) {
     content: seeded,
     updatedAt
   };
+}
+
+async function discardUncommittedRevision(env, storageRevision) {
+  try {
+    await deleteLongTextRevision(env, storageRevision);
+  } catch (error) {
+    console.warn("Unable to discard an uncommitted content revision", error);
+  }
+}
+
+function nextUpdatedAt(previousValue = "") {
+  const previousTime = Date.parse(previousValue);
+  const nextTime = Number.isFinite(previousTime)
+    ? Math.max(Date.now(), previousTime + 1)
+    : Date.now();
+  return new Date(nextTime).toISOString();
 }

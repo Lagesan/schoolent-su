@@ -1,5 +1,9 @@
 import { isAuthenticated } from "../../_lib/auth.js";
-import { getContentRecord, saveContentRecord } from "../../_lib/db.js";
+import {
+  CONTENT_CONFLICT_CODE,
+  getContentRecord,
+  saveContentRecord
+} from "../../_lib/db.js";
 import { errorJson, json, readJson } from "../../_lib/http.js";
 import { assertSameOrigin } from "../../_lib/security.js";
 
@@ -11,10 +15,25 @@ export async function onRequestGet({ request, env }) {
 
   try {
     const record = await getContentRecord(env);
-    const migrated = record.migrationNeeded ? await saveContentRecord(env, record.content) : null;
-    const activeRecord = migrated
-      ? { content: migrated.content, updatedAt: migrated.updatedAt, storage: "d1" }
-      : record;
+    let migrated = null;
+    let activeRecord = record;
+    if (record.migrationNeeded) {
+      try {
+        migrated = await saveContentRecord(env, record.content, {
+          expectedUpdatedAt: record.updatedAt
+        });
+        activeRecord = {
+          content: migrated.content,
+          updatedAt: migrated.updatedAt,
+          storage: "d1"
+        };
+      } catch (error) {
+        if (error.code !== CONTENT_CONFLICT_CODE) {
+          throw error;
+        }
+        activeRecord = await getContentRecord(env);
+      }
+    }
 
     return json({
       ok: true,
@@ -44,7 +63,16 @@ export async function onRequestPut({ request, env }) {
 
   try {
     const body = await readJson(request);
-    const result = await saveContentRecord(env, body.content);
+    const expectedUpdatedAt = typeof body.expectedUpdatedAt === "string"
+      ? body.expectedUpdatedAt.trim()
+      : "";
+    if (!expectedUpdatedAt) {
+      return errorJson("Reload the editor before saving.", 428, {
+        code: "CONTENT_VERSION_REQUIRED"
+      });
+    }
+
+    const result = await saveContentRecord(env, body.content, { expectedUpdatedAt });
     return json({
       ok: true,
       content: result.content,
@@ -54,6 +82,18 @@ export async function onRequestPut({ request, env }) {
       }
     });
   } catch (error) {
+    if (error.code === CONTENT_CONFLICT_CODE) {
+      let updatedAt = null;
+      try {
+        updatedAt = (await getContentRecord(env)).updatedAt;
+      } catch {
+        // The conflict response remains actionable even if metadata refresh fails.
+      }
+      return errorJson("Content was published from another editor session.", 409, {
+        code: CONTENT_CONFLICT_CODE,
+        meta: { updatedAt }
+      });
+    }
     return errorJson(error.message || "Unable to save content.", 500);
   }
 }

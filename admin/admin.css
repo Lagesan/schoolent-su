@@ -42,9 +42,30 @@
   gap: 14px;
 }
 
+#loginPanel .admin-form {
+  max-width: 480px;
+}
+
 .editor-toolbar {
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   align-items: center;
+  position: sticky;
+  top: 12px;
+  z-index: 30;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.96);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42);
+}
+
+.editor-toolbar[data-dirty="true"] [data-action="save"]::after {
+  content: " •";
+  color: var(--warning);
+}
+
+.editor-toolbar .button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
 }
 
 .editor-grid,
@@ -92,6 +113,13 @@
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.field input:hover,
+.field textarea:hover,
+.field select:hover {
+  border-color: var(--line-strong);
 }
 
 .field textarea {
@@ -211,6 +239,29 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.list-item summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  transition: transform 180ms var(--ease-out), color 150ms ease, border-color 150ms ease;
+}
+
+.list-item[open] > summary::after {
+  content: "−";
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.summary-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .list-item summary::-webkit-details-marker {
@@ -361,8 +412,8 @@
 }
 
 .rich-toolbar button {
-  min-width: 34px;
-  min-height: 30px;
+  min-width: 44px;
+  min-height: 44px;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
@@ -381,6 +432,11 @@
 
 .rich-editor:focus {
   border-color: var(--line-strong);
+}
+
+.rich-editor:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
 }
 
 .attachment-row {
@@ -405,5 +461,49 @@
 
   .rotation-sort-card {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .status-strip,
+  .admin-card {
+    padding: 18px;
+  }
+
+  .editor-toolbar {
+    display: flex;
+    grid-template-columns: none;
+    gap: 8px;
+    top: 8px;
+    margin-inline: -6px;
+    padding: 10px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .editor-toolbar .button {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 44px;
+    padding: 9px 12px;
+    white-space: nowrap;
+  }
+
+  .button-row .button,
+  .row-actions .button {
+    width: auto;
+    min-height: 44px;
+  }
+
+  .attachment-row,
+  .rich-head {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .attachment-row {
+    overflow-wrap: anywhere;
   }
 }

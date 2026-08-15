@@ -1,11 +1,14 @@
 const pageType = document.body.dataset.pageType || "updates";
 
 const state = {
-  lang: localStorage.getItem("portal-lang") || detectPreferredLanguage(),
+  lang: readStoredLanguage(),
   content: null,
   meta: null,
-  isAppShell: detectAppShell()
+  isAppShell: detectAppShell(),
+  syncFailed: false
 };
+
+const CONTENT_CACHE_KEY = "schoolent-public-content-v1";
 
 const ui = {
   zh: {
@@ -16,6 +19,7 @@ const ui = {
       emptyHint: "这个页面已经准备好，等待后续发布内容。",
       footerPrefix: "问题上报邮箱",
       backHome: "返回首页",
+      backUpdates: "返回更新",
       updatedAt: "内容更新时间",
       aiReady: "已预留 AI / API 接口扩展位",
       fallback: "当前显示的是默认样板数据。",
@@ -23,7 +27,9 @@ const ui = {
       proposals: "提案追踪",
       updatesBadge: "UPDATES / FEED",
       proposalsBadge: "PROPOSALS / TRACKER",
-      openInApp: "App 模式"
+      openInApp: "App 模式",
+      syncFailed: "网络同步失败，当前显示上次公开内容。",
+      schoolentDeclaration: "查看 Schoolent 声明"
     },
     updates: {
       title: "更新流",
@@ -55,6 +61,7 @@ const ui = {
       emptyHint: "This page is ready for future updates.",
       footerPrefix: "Issue Report Email",
       backHome: "Back Home",
+      backUpdates: "Back to Updates",
       updatedAt: "Updated",
       aiReady: "API surface is ready for future AI integrations",
       fallback: "The site is currently showing seeded sample data.",
@@ -62,7 +69,9 @@ const ui = {
       proposals: "Proposals",
       updatesBadge: "UPDATES / FEED",
       proposalsBadge: "PROPOSALS / TRACKER",
-      openInApp: "App Mode"
+      openInApp: "App Mode",
+      syncFailed: "Live sync failed. Showing the last public record.",
+      schoolentDeclaration: "View the Schoolent declaration"
     },
     updates: {
       title: "Updates Feed",
@@ -99,9 +108,14 @@ const socialIcons = {
   default: "•"
 };
 
-const schoolentDeclarationText = "Schoolent 是由KZID的Schoolent开发组创立和运维的标识，旨在为同学们提供学习资源分享、社交交流和项目实践的平台，与KSC完全独立，门户网站的活动和管理与本标识无关。";
+const schoolentDeclarationText = {
+  zh: "Schoolent 是由KZID的Schoolent开发组创立和运维的标识，旨在为同学们提供学习资源分享、社交交流和项目实践的平台，与KSC完全独立，门户网站的活动和管理与本标识无关。",
+  en: "Schoolent is a mark created and operated by KZID's Schoolent development group. It provides a platform for learning-resource sharing, social exchange, and project practice. Schoolent is fully independent of KSC, and the activities and administration presented on this portal are not affiliated with the mark."
+};
 
 const dom = {
+  brandLink: document.querySelector(".brand"),
+  backLink: document.querySelector("[data-back-link]"),
   brandName: document.querySelector("#brandName"),
   badge: document.querySelector("#pageBadge"),
   title: document.querySelector("#pageTitle"),
@@ -114,9 +128,13 @@ const dom = {
 document.querySelectorAll("[data-lang-trigger]").forEach((button) => {
   button.addEventListener("click", () => {
     state.lang = button.dataset.langTrigger;
-    localStorage.setItem("portal-lang", state.lang);
+    storeLanguage(state.lang);
     renderLanguageSwitch();
-    render();
+    if (state.content) {
+      render();
+    } else {
+      renderStaticShell();
+    }
   });
 });
 
@@ -125,33 +143,79 @@ init();
 async function init() {
   document.body.classList.toggle("is-app-shell", state.isAppShell);
   renderLanguageSwitch();
+  renderStaticShell();
   setupSchoolentDeclarationActions();
 
-  if (dom.title) {
-    dom.title.textContent = ui[state.lang].common.loading;
+  const cachedPayload = readContentCache();
+  if (cachedPayload) {
+    state.content = cachedPayload.content;
+    state.meta = cachedPayload.meta;
+    render();
+    setText(dom.updatedAt, ui[state.lang].common.loading);
   }
 
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15000);
   try {
-    const response = await fetch("/api/content");
+    const response = await fetch("/api/content", { signal: controller.signal });
     if (!response.ok) {
       throw new Error(`Failed to fetch content: ${response.status}`);
     }
 
     const payload = await response.json();
+    if (!payload?.content || typeof payload.content !== "object") {
+      throw new Error("Invalid content payload");
+    }
     state.content = payload.content;
     state.meta = payload.meta;
-    render();
+    state.syncFailed = false;
+    writeContentCache(payload);
+    if (!sameContentRevision(cachedPayload, payload)) {
+      render();
+    } else {
+      setText(dom.updatedAt, `${ui[state.lang].common.updatedAt}: ${formatDate(state.meta?.updatedAt, true)}`);
+    }
   } catch (error) {
     console.error(error);
-    if (dom.title) {
-      dom.title.textContent = ui[state.lang].common.error;
-    }
-    if (dom.subtitle) {
-      dom.subtitle.textContent = "";
-    }
-    if (dom.stream) {
+    state.syncFailed = true;
+    if (state.content) {
+      setText(dom.updatedAt, ui[state.lang].common.syncFailed);
+    } else {
+      setText(dom.subtitle, ui[state.lang].common.error);
       dom.stream.innerHTML = emptyState();
     }
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function renderStaticShell() {
+  if (state.content) {
+    return;
+  }
+
+  const lang = ui[state.lang] || ui.zh;
+  const shortName = state.lang === "zh" ? "KSC" : "KZID SC";
+  setText(dom.brandName, shortName);
+  setText(dom.updatedAt, state.syncFailed ? lang.common.error : lang.common.loading);
+
+  if (pageType === "proposals") {
+    setText(dom.badge, lang.common.proposalsBadge);
+    setText(dom.title, lang.proposals.title);
+    setText(dom.subtitle, lang.proposals.subtitle);
+  } else if (pageType === "update-detail") {
+    setText(dom.badge, state.lang === "zh" ? "公开记录 / DETAIL" : "PUBLIC RECORD / DETAIL");
+    setText(dom.title, state.lang === "zh" ? "公开内容" : "Public Record");
+    setText(dom.subtitle, state.lang === "zh" ? "正在同步最新发布内容。" : "Checking the latest published content.");
+  } else {
+    setText(dom.badge, lang.common.updatesBadge);
+    setText(dom.title, lang.updates.title);
+    setText(dom.subtitle, lang.updates.subtitle);
+  }
+
+  if (state.syncFailed) {
+    setText(dom.subtitle, lang.common.error);
+    dom.stream.innerHTML = emptyState(lang.common.error);
   }
 }
 
@@ -169,7 +233,9 @@ function render() {
   document.title = `${shortName} | ${pageType === "proposals" ? lang.common.proposals : lang.common.updates}`;
 
   setText(dom.brandName, shortName);
-  setText(dom.updatedAt, `${lang.common.updatedAt}: ${formatDate(state.meta?.updatedAt, true)}`);
+  setText(dom.updatedAt, state.syncFailed
+    ? lang.common.syncFailed
+    : `${lang.common.updatedAt}: ${formatDate(state.meta?.updatedAt, true)}`);
   renderDetailFooter(content, lang);
 
   if (pageType === "proposals") {
@@ -516,7 +582,7 @@ function renderDetailFooter(content, lang) {
   dom.footer.innerHTML = `
     <div class="footer-brand">
       <div class="footer-brand-tile">
-        <button class="footer-brand-button" type="button" data-schoolent-declaration aria-label="Show Schoolent declaration">
+        <button class="footer-brand-button" type="button" data-schoolent-declaration aria-label="${escapeAttribute(lang.common.schoolentDeclaration)}">
           <img class="footer-brand-image" src="/assets/schoolent-icon.png" alt="Schoolent" />
           <span class="footer-brand-glow" aria-hidden="true"></span>
         </button>
@@ -563,28 +629,32 @@ function setupSchoolentDeclarationActions() {
 }
 
 function showSchoolentDeclaration(event) {
-  event?.currentTarget?.classList.add("is-pressed");
-  window.setTimeout(() => event?.currentTarget?.classList.remove("is-pressed"), 360);
+  const trigger = event?.currentTarget;
+  const previousFocus = document.activeElement;
+  const background = document.querySelector(".page-shell");
+  const declarationCopy = schoolentDeclarationText[state.lang] || schoolentDeclarationText.zh;
+  trigger?.classList.add("is-pressed");
+  window.setTimeout(() => trigger?.classList.remove("is-pressed"), 360);
 
   const existing = document.querySelector(".declaration-popover");
   existing?.remove();
 
   const popover = document.createElement("div");
   popover.className = "declaration-popover";
-  popover.setAttribute("style", "position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,0);opacity:0;pointer-events:none;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;");
+  popover.setAttribute("style", "position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);opacity:0;pointer-events:none;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;");
 
   const card = document.createElement("div");
   card.className = "declaration-card";
   card.setAttribute("role", "dialog");
   card.setAttribute("aria-modal", "true");
-  card.setAttribute("aria-label", "Schoolent declaration");
-  card.setAttribute("style", "position:relative;width:min(520px,100%);max-height:calc(100vh - 96px);overflow-y:auto;box-sizing:border-box;padding:32px;border:1px solid rgba(255,255,255,.42);background:#050505;color:#f7f7f7;display:block;");
+  card.setAttribute("aria-labelledby", "schoolentDeclarationTitle");
+  card.setAttribute("style", "position:relative;width:min(520px,100%);overflow-y:auto;box-sizing:border-box;border:1px solid rgba(255,255,255,.42);background:#050505;color:#f7f7f7;display:block;");
 
   const closeButton = document.createElement("button");
   closeButton.className = "declaration-close";
   closeButton.type = "button";
-  closeButton.setAttribute("aria-label", "Close");
-  closeButton.setAttribute("style", "position:absolute;top:12px;right:12px;width:36px;height:36px;border:1px solid rgba(255,255,255,.28);background:#050505;color:#fff;cursor:pointer;");
+  closeButton.setAttribute("aria-label", state.lang === "zh" ? "关闭" : "Close");
+  closeButton.setAttribute("style", "position:absolute;top:10px;right:10px;width:44px;height:44px;border:1px solid rgba(255,255,255,.28);background:#050505;color:#fff;cursor:pointer;");
   closeButton.textContent = "×";
 
   const label = document.createElement("p");
@@ -593,38 +663,87 @@ function showSchoolentDeclaration(event) {
   label.textContent = "SCHOOLENT DECLARATION";
 
   const heading = document.createElement("h3");
+  heading.id = "schoolentDeclarationTitle";
   heading.setAttribute("style", "margin:0 0 14px;font-family:var(--font-serif, serif);font-size:2rem;font-weight:400;color:#fff;display:block;");
   heading.textContent = "Schoolent";
 
   const copy = document.createElement("p");
   copy.className = "declaration-copy";
   copy.setAttribute("style", "margin:0;color:#d6d6d6;line-height:1.8;font-size:1rem;display:block;white-space:normal;");
-  copy.textContent = schoolentDeclarationText;
+  copy.textContent = declarationCopy;
 
   card.append(closeButton, label, heading, copy);
   popover.append(card);
   document.body.append(popover);
+  document.body.classList.add("has-open-dialog");
+  background?.setAttribute("inert", "");
   requestAnimationFrame(() => {
     popover.classList.add("is-visible");
     popover.style.opacity = "1";
     popover.style.pointerEvents = "auto";
     popover.style.background = "rgba(0,0,0,.76)";
+    closeButton.focus();
     if (state.isAppShell) {
       window.setTimeout(() => {
         const visibleHeight = copy.getBoundingClientRect().height;
         if (visibleHeight < 24) {
-          window.alert(`Schoolent Declaration\n\n${schoolentDeclarationText}`);
+          window.alert(`Schoolent Declaration\n\n${declarationCopy}`);
         }
       }, 160);
     }
   });
 
+  let closing = false;
   const close = () => {
+    if (closing) {
+      return;
+    }
+    closing = true;
     popover.classList.remove("is-visible");
     popover.style.opacity = "0";
     popover.style.pointerEvents = "none";
-    window.setTimeout(() => popover.remove(), 220);
+    document.body.classList.remove("has-open-dialog");
+    background?.removeAttribute("inert");
+    document.removeEventListener("keydown", handleDialogKeydown);
+    window.setTimeout(() => {
+      popover.remove();
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus();
+      }
+    }, 220);
   };
+
+  const handleDialogKeydown = (keyEvent) => {
+    if (keyEvent.key === "Escape") {
+      keyEvent.preventDefault();
+      close();
+      return;
+    }
+
+    if (keyEvent.key !== "Tab") {
+      return;
+    }
+
+    const focusable = [...card.querySelectorAll("button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])")]
+      .filter((node) => node instanceof HTMLElement && !node.hasAttribute("disabled"));
+    if (!focusable.length) {
+      keyEvent.preventDefault();
+      card.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (keyEvent.shiftKey && document.activeElement === first) {
+      keyEvent.preventDefault();
+      last.focus();
+    } else if (!keyEvent.shiftKey && document.activeElement === last) {
+      keyEvent.preventDefault();
+      first.focus();
+    }
+  };
+
+  document.addEventListener("keydown", handleDialogKeydown);
   popover.addEventListener("click", (clickEvent) => {
     if (clickEvent.target === popover || clickEvent.target.closest(".declaration-close")) {
       close();
@@ -657,14 +776,75 @@ function renderProposals(items, pageUi, lang) {
 }
 
 function renderLanguageSwitch() {
+  const lang = ui[state.lang] || ui.zh;
   document.querySelectorAll("[data-lang-trigger]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.langTrigger === state.lang);
+    const active = button.dataset.langTrigger === state.lang;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
   });
+  document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+  document.querySelector(".lang-switch")?.setAttribute("aria-label", state.lang === "zh" ? "语言切换" : "Language switcher");
+  const backLabel = pageType === "update-detail" ? lang.common.backUpdates : lang.common.backHome;
+  setText(dom.backLink, backLabel);
+  dom.brandLink?.setAttribute("aria-label", backLabel);
+}
+
+function readContentCache() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CONTENT_CACHE_KEY) || "null");
+    return parsed?.content && typeof parsed.content === "object" ? parsed : null;
+  } catch (error) {
+    console.warn("Unable to read public content cache", error);
+    return null;
+  }
+}
+
+function writeContentCache(payload) {
+  if (!payload?.content || typeof payload.content !== "object") {
+    return;
+  }
+
+  try {
+    localStorage.setItem(CONTENT_CACHE_KEY, JSON.stringify({
+      content: payload.content,
+      meta: payload.meta || null,
+      cachedAt: new Date().toISOString()
+    }));
+  } catch (error) {
+    console.warn("Unable to cache public content", error);
+  }
+}
+
+function sameContentRevision(left, right) {
+  return Boolean(
+    left?.content &&
+    right?.content &&
+    left?.meta?.updatedAt &&
+    right?.meta?.updatedAt &&
+    left.meta.updatedAt === right.meta.updatedAt
+  );
 }
 
 function detectPreferredLanguage() {
   const preferred = typeof navigator !== "undefined" ? navigator.language || navigator.languages?.[0] || "" : "";
   return preferred.toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+function readStoredLanguage() {
+  try {
+    const stored = localStorage.getItem("portal-lang");
+    return stored === "zh" || stored === "en" ? stored : detectPreferredLanguage();
+  } catch (error) {
+    return detectPreferredLanguage();
+  }
+}
+
+function storeLanguage(language) {
+  try {
+    localStorage.setItem("portal-lang", language);
+  } catch (error) {
+    console.warn("Unable to save language preference", error);
+  }
 }
 
 function detectAppShell() {

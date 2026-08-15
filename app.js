@@ -1,8 +1,48 @@
 const state = {
-  lang: localStorage.getItem("portal-lang") || detectPreferredLanguage(),
+  lang: readStoredLanguage(),
   content: null,
   meta: null,
-  isAppShell: detectAppShell()
+  isAppShell: detectAppShell(),
+  usingCachedContent: false,
+  syncing: false,
+  syncFailed: false
+};
+
+const CONTENT_CACHE_KEY = "schoolent-public-content-v1";
+
+const shellCopy = {
+  zh: {
+    brand: "KSC",
+    badge: "我们的主张",
+    title: "高效，及时，透明。",
+    subtitle: "组织结构、活动进度与公开信息集中呈现。",
+    primary: "查看透明数据",
+    secondary: "跟进提案状态",
+    syncing: "正在同步公开记录",
+    refreshing: "正在检查最新公开内容",
+    syncFailed: "网络同步失败，当前显示上次公开内容。",
+    retry: "重试",
+    record: "公开记录",
+    menu: "导航",
+    closeMenu: "收起",
+    backToTop: "返回顶部"
+  },
+  en: {
+    brand: "KZID SC",
+    badge: "OUR MANIFESTO",
+    title: "Efficient, Timely, and Transparent.",
+    subtitle: "A clear view of structure, activity progress, and public information.",
+    primary: "View transparency data",
+    secondary: "Track proposals",
+    syncing: "Syncing public records",
+    refreshing: "Checking for the latest public record",
+    syncFailed: "Live sync failed. Showing the last public record.",
+    retry: "Retry",
+    record: "Public record",
+    menu: "Menu",
+    closeMenu: "Close",
+    backToTop: "Back to top"
+  }
 };
 
 const ui = {
@@ -54,11 +94,16 @@ const ui = {
       loading: "正在加载内容…",
       error: "内容暂时加载失败，请稍后刷新。",
       noItems: "暂时还没有已发布内容。",
+      emptyHint: "内容发布后会自动显示在这里。",
       footerPrefix: "问题上报邮箱",
       updatedAt: "内容更新时间",
       aiReady: "已预留 AI / API 接口扩展位",
       fallback: "当前显示的是默认样板数据。",
-      connect: "连接部门"
+      connect: "连接部门",
+      homeLabel: "学生会透明治理门户首页",
+      schoolentDeclaration: "查看 Schoolent 声明",
+      linkCopied: "门户链接已复制。",
+      shareFailed: "暂时无法分享，请稍后重试。"
     },
     app: {
       badge: "APP MODE / SCHOOLENT.CN",
@@ -127,11 +172,16 @@ const ui = {
       loading: "Loading portal content...",
       error: "Portal data is temporarily unavailable. Please refresh later.",
       noItems: "No published items yet.",
+      emptyHint: "Published content will appear here automatically.",
       footerPrefix: "Issue Report Email",
       updatedAt: "Updated",
       aiReady: "API surface is ready for future AI integrations",
       fallback: "The site is currently showing seeded sample data.",
-      connect: "Connects with"
+      connect: "Connects with",
+      homeLabel: "Student council transparency portal home",
+      schoolentDeclaration: "View the Schoolent declaration",
+      linkCopied: "Portal link copied.",
+      shareFailed: "Unable to share right now. Please try again."
     },
     app: {
       badge: "APP MODE / SCHOOLENT.CN",
@@ -165,9 +215,24 @@ const socialIcons = {
   default: "•"
 };
 
-const schoolentDeclarationText = "Schoolent 是由KZID的Schoolent开发组创立和运维的标识，旨在为同学们提供学习资源分享、社交交流和项目实践的平台，与KSC完全独立，门户网站的活动和管理与本标识无关。";
+const schoolentDeclarationText = {
+  zh: "Schoolent 是由KZID的Schoolent开发组创立和运维的标识，旨在为同学们提供学习资源分享、社交交流和项目实践的平台，与KSC完全独立，门户网站的活动和管理与本标识无关。",
+  en: "Schoolent is a mark created and operated by KZID's Schoolent development group. It provides a platform for learning-resource sharing, social exchange, and project practice. Schoolent is fully independent of KSC, and the activities and administration presented on this portal are not affiliated with the mark."
+};
+
+let actionStatusTimer = 0;
 
 const dom = {
+  siteHeader: document.querySelector("#siteHeader"),
+  menuToggle: document.querySelector("#menuToggle"),
+  menuLabel: document.querySelector("[data-menu-label]"),
+  topbarActions: document.querySelector("#topbarActions"),
+  backToTop: document.querySelector("#backToTop"),
+  syncState: document.querySelector("#syncState"),
+  syncMessage: document.querySelector("[data-sync-message]"),
+  syncRetry: document.querySelector("[data-sync-retry]"),
+  actionStatus: document.querySelector("#actionStatus"),
+  brandLink: document.querySelector(".brand"),
   brandName: document.querySelector("#brandName"),
   heroBadge: document.querySelector("#heroBadge"),
   heroTitle: document.querySelector("#heroTitle"),
@@ -200,9 +265,13 @@ const dom = {
 document.querySelectorAll("[data-lang-trigger]").forEach((button) => {
   button.addEventListener("click", () => {
     state.lang = button.dataset.langTrigger;
-    localStorage.setItem("portal-lang", state.lang);
-    renderLanguageSwitch();
-    render();
+    storeLanguage(state.lang);
+    renderInterfaceLanguage();
+    if (state.content) {
+      render();
+    } else {
+      renderInitialShell();
+    }
   });
 });
 
@@ -210,45 +279,94 @@ init();
 
 async function init() {
   document.body.classList.toggle("is-app-shell", state.isAppShell);
-  renderLanguageSwitch();
+  renderInterfaceLanguage();
+  renderInitialShell();
+  setupMobileNavigation();
+  setupSectionNavigation();
+  setupBackToTop();
   setupAppModeActions();
   setupSchoolentDeclarationActions();
+  setupContentRetry();
 
-  if (dom.heroTitle) {
-    dom.heroTitle.textContent = ui[state.lang].common.loading;
+  const cachedPayload = readContentCache();
+  if (cachedPayload) {
+    state.content = cachedPayload.content;
+    state.meta = cachedPayload.meta;
+    state.usingCachedContent = true;
+    render();
+    setSyncState(shellCopy[state.lang].refreshing);
   }
 
+  await loadPublicContent(cachedPayload);
+}
+
+async function loadPublicContent(previousPayload = null) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15000);
+  state.syncing = true;
+  state.syncFailed = false;
+  dom.metricGrid?.setAttribute("aria-busy", "true");
+  setSyncState(state.content ? shellCopy[state.lang].refreshing : shellCopy[state.lang].syncing);
+
   try {
-    const response = await fetch("/api/content");
+    const response = await fetch("/api/content", { signal: controller.signal });
     if (!response.ok) {
       throw new Error(`Failed to fetch content: ${response.status}`);
     }
 
     const payload = await response.json();
+    if (!payload?.content || typeof payload.content !== "object") {
+      throw new Error("Invalid content payload");
+    }
     state.content = payload.content;
     state.meta = payload.meta;
-    render();
+    state.usingCachedContent = false;
+    writeContentCache(payload);
+    if (!sameContentRevision(previousPayload, payload)) {
+      render();
+    } else {
+      document.body.classList.add("is-content-ready");
+      dom.metricGrid?.setAttribute("aria-busy", "false");
+    }
+    document.body.classList.remove("has-content-error");
+    setSyncState("");
   } catch (error) {
     console.error(error);
-    if (dom.heroTitle) {
-      dom.heroTitle.textContent = ui[state.lang].common.error;
+    state.syncFailed = true;
+    document.body.classList.add("has-content-error");
+
+    if (state.content) {
+      setSyncState(shellCopy[state.lang].syncFailed, { retry: true });
     }
-    if (dom.heroSubtitle) {
-      dom.heroSubtitle.textContent = "";
+
+    if (!state.content) {
+      setText(dom.siteTagline, ui[state.lang].common.error);
+      setSyncState(ui[state.lang].common.error, { retry: true });
+      if (dom.metricGrid) {
+        dom.metricGrid.setAttribute("aria-busy", "false");
+        dom.metricGrid.innerHTML = `
+          <div class="metric-item metric-item-error">
+            <dt>${escapeHtml(shellCopy[state.lang].record)}</dt>
+            <dd>${escapeHtml(ui[state.lang].common.error)}</dd>
+          </div>
+        `;
+      }
     }
-    if (dom.heroPromise) {
-      dom.heroPromise.textContent = "";
-    }
+
     if (dom.appModeHub && state.isAppShell) {
       dom.appModeHub.hidden = false;
       dom.appModeHub.innerHTML = `
         <article class="app-surface app-surface-primary">
           <p class="section-label">${escapeHtml(ui[state.lang].app.badge)}</p>
           <h3>${escapeHtml(ui[state.lang].common.error)}</h3>
-          <p class="app-surface-copy">${escapeHtml(ui[state.lang].app.noBridge)}</p>
+          <p class="app-surface-copy">${escapeHtml(shellCopy[state.lang].syncFailed)}</p>
         </article>
       `;
     }
+  } finally {
+    state.syncing = false;
+    window.clearTimeout(timeout);
+    dom.metricGrid?.setAttribute("aria-busy", "false");
   }
 }
 
@@ -260,7 +378,7 @@ function render() {
   const language = ui[state.lang];
   const { content, meta } = state;
 
-  document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+  renderInterfaceLanguage();
   const shortName = pick(content.site?.shortName) || "Student Council Portal";
   const tagline = pick(content.site?.tagline);
   document.title = tagline ? `${shortName} | ${tagline}` : shortName;
@@ -273,16 +391,6 @@ function render() {
   setText(dom.primaryAction, pick(content.hero?.ctaPrimary));
   setText(dom.secondaryAction, pick(content.hero?.ctaSecondary));
   setText(dom.siteTagline, pick(content.site?.tagline));
-
-  document.querySelectorAll("[data-nav]").forEach((item) => {
-    item.textContent = language.nav[item.dataset.nav];
-  });
-
-  setText(dom.organizationLabel, language.labels.organization.toUpperCase());
-  setText(dom.activitiesLabel, language.labels.activities.toUpperCase());
-  setText(dom.financeLabel, language.labels.finance.toUpperCase());
-  setText(dom.initiativesLabel, language.labels.initiatives.toUpperCase());
-  setText(dom.publicationsLabel, language.labels.publications.toUpperCase());
 
   setText(dom.organizationHeading, pick(content.organization?.heading));
   setText(dom.activitiesHeading, pick(content.updates?.heading) || pick(content.activities?.heading));
@@ -299,12 +407,94 @@ function render() {
   renderInitiatives(content.initiatives?.items);
   renderPublications(content.publications?.items);
   renderFooter(content, meta, language);
+  dom.metricGrid?.setAttribute("aria-busy", "false");
+  document.body.classList.toggle("has-content-error", state.syncFailed);
+  document.body.classList.add("is-content-ready");
+}
+
+function renderInterfaceLanguage() {
+  const language = ui[state.lang] || ui.zh;
+  const copy = shellCopy[state.lang] || shellCopy.zh;
+
+  document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+  renderLanguageSwitch();
+
+  document.querySelectorAll("[data-nav]").forEach((item) => {
+    item.textContent = language.nav[item.dataset.nav];
+  });
+
+  setText(dom.organizationLabel, language.labels.organization.toUpperCase());
+  setText(dom.activitiesLabel, language.labels.activities.toUpperCase());
+  setText(dom.financeLabel, language.labels.finance.toUpperCase());
+  setText(dom.initiativesLabel, language.labels.initiatives.toUpperCase());
+  setText(dom.publicationsLabel, language.labels.publications.toUpperCase());
+
+  const menuOpen = dom.menuToggle?.getAttribute("aria-expanded") === "true";
+  setText(dom.menuLabel, menuOpen ? copy.closeMenu : copy.menu);
+  setText(dom.syncRetry, copy.retry);
+  dom.menuToggle?.setAttribute("aria-label", menuOpen ? copy.closeMenu : copy.menu);
+  dom.backToTop?.setAttribute("aria-label", copy.backToTop);
+  dom.brandLink?.setAttribute("aria-label", language.common.homeLabel);
+  document.querySelector(".topnav")?.setAttribute("aria-label", state.lang === "zh" ? "主导航" : "Primary navigation");
+  document.querySelector(".lang-switch")?.setAttribute("aria-label", state.lang === "zh" ? "语言切换" : "Language switcher");
+
+  if (state.syncFailed) {
+    setSyncState(state.content ? copy.syncFailed : language.common.error, { retry: true });
+  } else if (state.syncing) {
+    setSyncState(state.content ? copy.refreshing : copy.syncing);
+  }
+}
+
+function renderInitialShell() {
+  if (state.content) {
+    return;
+  }
+
+  const copy = shellCopy[state.lang] || shellCopy.zh;
+  document.title = `${copy.brand} | ${copy.title}`;
+  setText(dom.brandName, copy.brand);
+  setText(dom.heroBadge, copy.badge);
+  setText(dom.heroTitle, copy.title);
+  setText(dom.heroSubtitle, copy.subtitle);
+  setOptionalText(dom.heroPromise, "");
+  setText(dom.primaryAction, copy.primary);
+  setText(dom.secondaryAction, copy.secondary);
+  setText(dom.siteTagline, state.syncFailed ? ui[state.lang].common.error : copy.syncing);
+  setSyncState(state.syncFailed ? ui[state.lang].common.error : copy.syncing, { retry: state.syncFailed });
+
+  if (dom.metricGrid) {
+    dom.metricGrid.setAttribute("aria-busy", String(!state.syncFailed));
+    dom.metricGrid.innerHTML = `
+      <div class="metric-item ${state.syncFailed ? "metric-item-error" : "metric-item-loading"}">
+        <dt>${escapeHtml(copy.record)}</dt>
+        <dd>${state.syncFailed
+          ? escapeHtml(ui[state.lang].common.error)
+          : `<span class="sync-indicator">${escapeHtml(copy.syncing)}</span>`}
+        </dd>
+      </div>
+    `;
+  }
 }
 
 function renderLanguageSwitch() {
   document.querySelectorAll("[data-lang-trigger]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.langTrigger === state.lang);
+    const active = button.dataset.langTrigger === state.lang;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
   });
+}
+
+function setSyncState(message, { retry = false } = {}) {
+  if (!dom.syncState) {
+    return;
+  }
+
+  const text = String(message || "").trim();
+  setText(dom.syncMessage, text);
+  if (dom.syncRetry) {
+    dom.syncRetry.hidden = !retry;
+  }
+  dom.syncState.hidden = !text;
 }
 
 function renderAppModeHub(content, language, meta) {
@@ -850,7 +1040,7 @@ function renderFooter(content, meta, language) {
   dom.siteFooter.innerHTML = `
     <div class="footer-brand">
       <div class="footer-brand-tile">
-        <button class="footer-brand-button" type="button" data-schoolent-declaration aria-label="Show Schoolent declaration">
+        <button class="footer-brand-button" type="button" data-schoolent-declaration aria-label="${escapeAttribute(language.common.schoolentDeclaration)}">
           <img class="footer-brand-image" src="/assets/schoolent-icon.png" alt="Schoolent" />
           <span class="footer-brand-glow" aria-hidden="true"></span>
         </button>
@@ -878,6 +1068,173 @@ function renderFooter(content, meta, language) {
     </div>
   `;
 
+}
+
+function setupContentRetry() {
+  dom.syncRetry?.addEventListener("click", () => {
+    const previousPayload = state.content ? { content: state.content, meta: state.meta } : null;
+    dom.syncRetry.disabled = true;
+    loadPublicContent(previousPayload).finally(() => {
+      dom.syncRetry.disabled = false;
+    });
+  });
+}
+
+function setupMobileNavigation() {
+  if (!dom.siteHeader || !dom.menuToggle || !dom.topbarActions || state.isAppShell) {
+    return;
+  }
+
+  const mobileQuery = window.matchMedia("(max-width: 960px)");
+  dom.siteHeader.classList.add("is-menu-ready");
+
+  const setOpen = (open, { restoreFocus = false } = {}) => {
+    const nextOpen = Boolean(open && mobileQuery.matches);
+    dom.siteHeader.classList.toggle("is-menu-open", nextOpen);
+    dom.menuToggle.setAttribute("aria-expanded", String(nextOpen));
+    renderInterfaceLanguage();
+
+    if (restoreFocus) {
+      dom.menuToggle.focus();
+    }
+  };
+
+  dom.menuToggle.addEventListener("click", () => {
+    setOpen(dom.menuToggle.getAttribute("aria-expanded") !== "true");
+  });
+
+  dom.topbarActions.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest("a")) {
+      setOpen(false);
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (
+      mobileQuery.matches &&
+      dom.menuToggle.getAttribute("aria-expanded") === "true" &&
+      event.target instanceof Node &&
+      !dom.siteHeader.contains(event.target)
+    ) {
+      setOpen(false);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && dom.menuToggle.getAttribute("aria-expanded") === "true") {
+      setOpen(false, { restoreFocus: true });
+    }
+  });
+
+  const handleViewportChange = () => setOpen(false);
+  if (typeof mobileQuery.addEventListener === "function") {
+    mobileQuery.addEventListener("change", handleViewportChange);
+  } else {
+    mobileQuery.addListener(handleViewportChange);
+  }
+}
+
+function setupSectionNavigation() {
+  const links = Array.from(document.querySelectorAll('.topnav a[href^="#"]'));
+  const sections = links
+    .map((link) => ({ link, section: document.querySelector(link.getAttribute("href")) }))
+    .filter((item) => item.section);
+
+  if (!sections.length) {
+    return;
+  }
+
+  let frame = 0;
+  const update = () => {
+    frame = 0;
+    const offset = Math.max(96, (dom.siteHeader?.getBoundingClientRect().height || 0) + 24);
+    let active = null;
+
+    sections.forEach((item) => {
+      if (item.section.getBoundingClientRect().top <= offset) {
+        active = item;
+      }
+    });
+
+    sections.forEach((item) => {
+      const current = item === active;
+      item.link.classList.toggle("is-current", current);
+      if (current) {
+        item.link.setAttribute("aria-current", "location");
+      } else {
+        item.link.removeAttribute("aria-current");
+      }
+    });
+  };
+
+  const requestUpdate = () => {
+    if (!frame) {
+      frame = window.requestAnimationFrame(update);
+    }
+  };
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate, { passive: true });
+  update();
+}
+
+function setupBackToTop() {
+  if (!dom.backToTop || state.isAppShell) {
+    return;
+  }
+
+  let frame = 0;
+  const update = () => {
+    frame = 0;
+    dom.backToTop.hidden = window.scrollY < 900;
+  };
+  const requestUpdate = () => {
+    if (!frame) {
+      frame = window.requestAnimationFrame(update);
+    }
+  };
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  update();
+}
+
+function readContentCache() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CONTENT_CACHE_KEY) || "null");
+    if (!parsed?.content || typeof parsed.content !== "object") {
+      return null;
+    }
+    return parsed;
+  } catch (error) {
+    console.warn("Unable to read public content cache", error);
+    return null;
+  }
+}
+
+function writeContentCache(payload) {
+  if (!payload?.content || typeof payload.content !== "object") {
+    return;
+  }
+
+  try {
+    localStorage.setItem(CONTENT_CACHE_KEY, JSON.stringify({
+      content: payload.content,
+      meta: payload.meta || null,
+      cachedAt: new Date().toISOString()
+    }));
+  } catch (error) {
+    console.warn("Unable to cache public content", error);
+  }
+}
+
+function sameContentRevision(left, right) {
+  return Boolean(
+    left?.content &&
+    right?.content &&
+    left?.meta?.updatedAt &&
+    right?.meta?.updatedAt &&
+    left.meta.updatedAt === right.meta.updatedAt
+  );
 }
 
 function resolveSocialIcon(icon) {
@@ -915,49 +1272,89 @@ function setupSchoolentDeclarationActions() {
   });
 }
 
-function sharePortal() {
+async function sharePortal() {
   const url = "https://schoolent.cn/?app=1";
   const title = pick(state.content?.site?.name) || pick(state.content?.hero?.title) || "Schoolent Portal";
   const text = pick(state.content?.hero?.subtitle) || pick(state.content?.site?.tagline) || title;
 
   if (hasNativeBridge() && typeof window.Android.share === "function") {
-    window.Android.share(text, url);
+    try {
+      window.Android.share(text, url);
+    } catch {
+      announceAction(ui[state.lang].common.shareFailed, true);
+    }
     return;
   }
 
   if (navigator.share) {
-    navigator.share({ title, text, url }).catch(() => { });
-    return;
+    try {
+      await navigator.share({ title, text, url });
+      return;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+    }
   }
 
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(url).catch(() => { });
+  try {
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("Clipboard API unavailable");
+    }
+    await navigator.clipboard.writeText(url);
+    announceAction(ui[state.lang].common.linkCopied);
+  } catch {
+    announceAction(ui[state.lang].common.shareFailed, true);
   }
 }
 
+function announceAction(message, isError = false) {
+  if (!dom.actionStatus) {
+    return;
+  }
+
+  window.clearTimeout(actionStatusTimer);
+  dom.actionStatus.textContent = message;
+  dom.actionStatus.hidden = false;
+  dom.actionStatus.classList.toggle("is-error", isError);
+  requestAnimationFrame(() => dom.actionStatus?.classList.add("is-visible"));
+  actionStatusTimer = window.setTimeout(() => {
+    dom.actionStatus?.classList.remove("is-visible");
+    window.setTimeout(() => {
+      if (dom.actionStatus) {
+        dom.actionStatus.hidden = true;
+      }
+    }, 180);
+  }, 2800);
+}
+
 function showSchoolentDeclaration(event) {
-  event?.currentTarget?.classList.add("is-pressed");
-  window.setTimeout(() => event?.currentTarget?.classList.remove("is-pressed"), 360);
+  const trigger = event?.currentTarget;
+  const previousFocus = document.activeElement;
+  const background = document.querySelector(".page-shell");
+  const declarationCopy = schoolentDeclarationText[state.lang] || schoolentDeclarationText.zh;
+  trigger?.classList.add("is-pressed");
+  window.setTimeout(() => trigger?.classList.remove("is-pressed"), 360);
 
   const existing = document.querySelector(".declaration-popover");
   existing?.remove();
 
   const popover = document.createElement("div");
   popover.className = "declaration-popover";
-  popover.setAttribute("style", "position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,0);opacity:0;pointer-events:none;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;");
+  popover.setAttribute("style", "position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);opacity:0;pointer-events:none;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;");
 
   const card = document.createElement("div");
   card.className = "declaration-card";
   card.setAttribute("role", "dialog");
   card.setAttribute("aria-modal", "true");
-  card.setAttribute("aria-label", "Schoolent declaration");
-  card.setAttribute("style", "position:relative;width:min(520px,100%);max-height:calc(100vh - 96px);overflow-y:auto;box-sizing:border-box;padding:32px;border:1px solid rgba(255,255,255,.42);background:#050505;color:#f7f7f7;display:block;");
+  card.setAttribute("aria-labelledby", "schoolentDeclarationTitle");
+  card.setAttribute("style", "position:relative;width:min(520px,100%);overflow-y:auto;box-sizing:border-box;border:1px solid rgba(255,255,255,.42);background:#050505;color:#f7f7f7;display:block;");
 
   const closeButton = document.createElement("button");
   closeButton.className = "declaration-close";
   closeButton.type = "button";
-  closeButton.setAttribute("aria-label", "Close");
-  closeButton.setAttribute("style", "position:absolute;top:12px;right:12px;width:36px;height:36px;border:1px solid rgba(255,255,255,.28);background:#050505;color:#fff;cursor:pointer;");
+  closeButton.setAttribute("aria-label", state.lang === "zh" ? "关闭" : "Close");
+  closeButton.setAttribute("style", "position:absolute;top:10px;right:10px;width:44px;height:44px;border:1px solid rgba(255,255,255,.28);background:#050505;color:#fff;cursor:pointer;");
   closeButton.textContent = "×";
 
   const label = document.createElement("p");
@@ -966,38 +1363,87 @@ function showSchoolentDeclaration(event) {
   label.textContent = "SCHOOLENT DECLARATION";
 
   const heading = document.createElement("h3");
+  heading.id = "schoolentDeclarationTitle";
   heading.setAttribute("style", "margin:0 0 14px;font-family:var(--font-serif, serif);font-size:2rem;font-weight:400;color:#fff;display:block;");
   heading.textContent = "Schoolent";
 
   const copy = document.createElement("p");
   copy.className = "declaration-copy";
   copy.setAttribute("style", "margin:0;color:#d6d6d6;line-height:1.8;font-size:1rem;display:block;white-space:normal;");
-  copy.textContent = schoolentDeclarationText;
+  copy.textContent = declarationCopy;
 
   card.append(closeButton, label, heading, copy);
   popover.append(card);
   document.body.append(popover);
+  document.body.classList.add("has-open-dialog");
+  background?.setAttribute("inert", "");
   requestAnimationFrame(() => {
     popover.classList.add("is-visible");
     popover.style.opacity = "1";
     popover.style.pointerEvents = "auto";
     popover.style.background = "rgba(0,0,0,.76)";
+    closeButton.focus();
     if (state.isAppShell) {
       window.setTimeout(() => {
         const visibleHeight = copy.getBoundingClientRect().height;
         if (visibleHeight < 24) {
-          window.alert(`Schoolent Declaration\n\n${schoolentDeclarationText}`);
+          window.alert(`Schoolent Declaration\n\n${declarationCopy}`);
         }
       }, 160);
     }
   });
 
+  let closing = false;
   const close = () => {
+    if (closing) {
+      return;
+    }
+    closing = true;
     popover.classList.remove("is-visible");
     popover.style.opacity = "0";
     popover.style.pointerEvents = "none";
-    window.setTimeout(() => popover.remove(), 220);
+    document.body.classList.remove("has-open-dialog");
+    background?.removeAttribute("inert");
+    document.removeEventListener("keydown", handleDialogKeydown);
+    window.setTimeout(() => {
+      popover.remove();
+      const focusTarget = previousFocus instanceof HTMLElement && previousFocus.isConnected
+        ? previousFocus
+        : document.querySelector("[data-schoolent-declaration]");
+      if (focusTarget instanceof HTMLElement) {
+        focusTarget.focus();
+      }
+    }, 220);
   };
+
+  const handleDialogKeydown = (keyboardEvent) => {
+    if (keyboardEvent.key === "Escape") {
+      keyboardEvent.preventDefault();
+      close();
+      return;
+    }
+
+    if (keyboardEvent.key !== "Tab") {
+      return;
+    }
+
+    const focusable = Array.from(card.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) {
+      return;
+    }
+
+    if (keyboardEvent.shiftKey && document.activeElement === first) {
+      keyboardEvent.preventDefault();
+      last.focus();
+    } else if (!keyboardEvent.shiftKey && document.activeElement === last) {
+      keyboardEvent.preventDefault();
+      first.focus();
+    }
+  };
+
+  document.addEventListener("keydown", handleDialogKeydown);
   popover.addEventListener("click", (event) => {
     if (event.target === popover || event.target.closest(".declaration-close")) {
       close();
@@ -1025,6 +1471,23 @@ function readAppVersion() {
 function detectPreferredLanguage() {
   const preferred = typeof navigator !== "undefined" ? navigator.language || navigator.languages?.[0] || "" : "";
   return preferred.toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+function readStoredLanguage() {
+  try {
+    const stored = localStorage.getItem("portal-lang");
+    return stored === "zh" || stored === "en" ? stored : detectPreferredLanguage();
+  } catch (error) {
+    return detectPreferredLanguage();
+  }
+}
+
+function storeLanguage(language) {
+  try {
+    localStorage.setItem("portal-lang", language);
+  } catch (error) {
+    console.warn("Unable to save language preference", error);
+  }
 }
 
 function detectAppShell() {
@@ -1077,8 +1540,13 @@ function detailHref(type, id) {
 }
 
 function emptyState() {
-  const template = document.querySelector("#emptyStateTemplate");
-  return template ? template.innerHTML : `<div class="empty-state">${escapeHtml(ui[state.lang].common.noItems)}</div>`;
+  const language = ui[state.lang] || ui.zh;
+  return `
+    <div class="empty-state">
+      <p class="empty-title">${escapeHtml(language.common.noItems)}</p>
+      <p class="empty-copy">${escapeHtml(language.common.emptyHint)}</p>
+    </div>
+  `;
 }
 
 function pick(value) {

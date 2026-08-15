@@ -1,6 +1,7 @@
 import { hasBucket, objectUrl, safeObjectName } from "./r2.js";
 
 const TEXT_MARKER = "__schoolentR2Text";
+const R2_OPERATION_CONCURRENCY = 8;
 
 const LONG_TEXT_FIELDS = [
   ["hero", "subtitle"],
@@ -34,24 +35,72 @@ const LONG_TEXT_FIELDS = [
 
 export async function hydrateLongTextFields(env, content) {
   const copy = clone(content);
-  await visitLongTextFields(copy, async (holder, key, path) => {
-    holder[key] = await hydrateLocalizedText(env, holder[key], path);
+  const fields = [];
+  await visitLongTextFields(copy, (holder, key) => {
+    fields.push({ holder, key, value: holder[key] });
   });
+
+  const descriptors = fields
+    .filter(({ value }) => isTextMarker(value))
+    .flatMap(({ value }) => [value.zh, value.en]);
+  const hydratedText = await readTextObjects(env, descriptors);
+
+  for (const { holder, key, value } of fields) {
+    holder[key] = hydrateLocalizedText(value, hydratedText);
+  }
+
   return copy;
 }
 
-export async function dehydrateLongTextFields(env, content) {
+export async function dehydrateLongTextFields(env, content, { storageRevision = crypto.randomUUID() } = {}) {
   const copy = clone(content);
   if (!hasBucket(env)) {
     return copy;
   }
 
   const usedKeys = new Set();
-  await visitLongTextFields(copy, async (holder, key, path) => {
-    holder[key] = await dehydrateLocalizedText(env, holder[key], path, usedKeys);
+  const fields = [];
+  await visitLongTextFields(copy, (holder, key, path) => {
+    fields.push({ holder, key, path, value: holder[key] });
   });
-  await deleteStaleTextObjects(env, usedKeys);
+  let dehydratedValues;
+  try {
+    dehydratedValues = await mapWithConcurrency(
+      fields,
+      R2_OPERATION_CONCURRENCY,
+      ({ path, value }) => dehydrateLocalizedText(env, value, path, usedKeys, storageRevision)
+    );
+  } catch (error) {
+    await deleteKeysBestEffort(env, usedKeys);
+    throw error;
+  }
+  fields.forEach(({ holder, key }, index) => {
+    holder[key] = dehydratedValues[index];
+  });
+
   return copy;
+}
+
+export async function deleteStaleLongTextObjects(env, storedContent) {
+  if (!hasBucket(env) || typeof env.R2.list !== "function" || typeof env.R2.delete !== "function") {
+    return;
+  }
+
+  const usedKeys = new Set();
+  await visitLongTextFields(storedContent, (holder, key) => {
+    if (isTextMarker(holder[key])) {
+      markUsed(holder[key], usedKeys);
+    }
+  });
+  await deleteStaleObjects(env, "content/", usedKeys);
+}
+
+export async function deleteLongTextRevision(env, storageRevision) {
+  if (!storageRevision || !hasBucket(env) || typeof env.R2.list !== "function" || typeof env.R2.delete !== "function") {
+    return;
+  }
+
+  await deleteStaleObjects(env, `content/${safeObjectName(storageRevision)}/`, new Set());
 }
 
 export async function deleteStaleUpdateAttachments(env, content) {
@@ -74,10 +123,6 @@ export async function deleteStaleUpdateAttachments(env, content) {
 }
 
 export async function needsContentStorageMigration(env, content) {
-  if (Array.isArray(content?.notices) && content.notices.length) {
-    return true;
-  }
-
   if (!hasBucket(env)) {
     return false;
   }
@@ -93,18 +138,33 @@ export async function needsContentStorageMigration(env, content) {
   return hasInlineLongText;
 }
 
-async function hydrateLocalizedText(env, value, path) {
+function hydrateLocalizedText(value, hydratedText) {
   if (!isTextMarker(value)) {
     return value;
   }
 
   return {
-    zh: await readTextObject(env, value.zh),
-    en: await readTextObject(env, value.en)
+    zh: hydratedText.get(value.zh?.key) || "",
+    en: hydratedText.get(value.en?.key) || ""
   };
 }
 
-async function dehydrateLocalizedText(env, value, path, usedKeys) {
+async function readTextObjects(env, descriptors) {
+  const keys = [
+    ...new Set(
+      descriptors
+        .map((descriptor) => descriptor?.key)
+        .filter(Boolean)
+    )
+  ];
+  const values = await mapWithConcurrency(keys, R2_OPERATION_CONCURRENCY, (key) =>
+    readTextObject(env, { key })
+  );
+
+  return new Map(keys.map((key, index) => [key, values[index]]));
+}
+
+async function dehydrateLocalizedText(env, value, path, usedKeys, storageRevision) {
   if (isTextMarker(value)) {
     markUsed(value, usedKeys);
     return value;
@@ -114,8 +174,8 @@ async function dehydrateLocalizedText(env, value, path, usedKeys) {
     return value;
   }
 
-  const zh = await writeTextObject(env, path, "zh", value.zh, usedKeys);
-  const en = await writeTextObject(env, path, "en", value.en, usedKeys);
+  const zh = await writeTextObject(env, storageRevision, path, "zh", value.zh, usedKeys);
+  const en = await writeTextObject(env, storageRevision, path, "en", value.en, usedKeys);
 
   if (!zh && !en) {
     return { zh: "", en: "" };
@@ -149,15 +209,42 @@ async function readTextObject(env, descriptor) {
   return object.text();
 }
 
-async function writeTextObject(env, path, lang, value, usedKeys) {
+async function mapWithConcurrency(items, limit, mapper) {
+  if (!items.length) {
+    return [];
+  }
+
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    () => worker()
+  );
+  const settlements = await Promise.allSettled(workers);
+  const failure = settlements.find((result) => result.status === "rejected");
+  if (failure) {
+    throw failure.reason;
+  }
+  return results;
+}
+
+async function writeTextObject(env, storageRevision, path, lang, value, usedKeys) {
   const text = typeof value === "string" ? value : "";
   const rich = path.includes(".body");
   const extension = rich ? "html" : "txt";
   const contentType = rich ? "text/html; charset=utf-8" : "text/plain; charset=utf-8";
-  const key = `content/${safeObjectName(path)}/${lang}.${extension}`;
+  const key = `content/${safeObjectName(storageRevision)}/${safeObjectName(path)}/${lang}.${extension}`;
 
   if (!text.trim()) {
-    await deleteObject(env, key);
     return null;
   }
 
@@ -167,6 +254,7 @@ async function writeTextObject(env, path, lang, value, usedKeys) {
     },
     customMetadata: {
       source: "schoolent-content",
+      revision: storageRevision,
       path,
       lang
     }
@@ -180,14 +268,6 @@ async function writeTextObject(env, path, lang, value, usedKeys) {
   };
 }
 
-async function deleteStaleTextObjects(env, usedKeys) {
-  if (typeof env.R2.list !== "function" || typeof env.R2.delete !== "function") {
-    return;
-  }
-
-  await deleteStaleObjects(env, "content/", usedKeys);
-}
-
 async function deleteStaleObjects(env, prefix, usedKeys) {
   let cursor;
   do {
@@ -199,9 +279,21 @@ async function deleteStaleObjects(env, prefix, usedKeys) {
       .map((item) => item.key)
       .filter((key) => !usedKeys.has(key));
 
-    await Promise.all(staleKeys.map((key) => deleteObject(env, key)));
+    await mapWithConcurrency(staleKeys, R2_OPERATION_CONCURRENCY, (key) =>
+      deleteObject(env, key)
+    );
     cursor = page.truncated ? page.cursor : undefined;
   } while (cursor);
+}
+
+async function deleteKeysBestEffort(env, keys) {
+  await mapWithConcurrency([...keys], R2_OPERATION_CONCURRENCY, async (key) => {
+    try {
+      await deleteObject(env, key);
+    } catch {
+      // A later successful save also removes abandoned revision objects.
+    }
+  });
 }
 
 async function deleteObject(env, key) {
