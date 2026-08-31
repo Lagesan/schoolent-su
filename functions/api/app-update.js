@@ -1,10 +1,10 @@
 import { securityHeaders } from "../_lib/security.js";
 
-const VERSION_CODE = 5;
-const VERSION_NAME = "1.4";
-const APK_FILENAME = "Schoolent-Android-v1.4.apk";
-const APK_SIZE_BYTES = 46746134;
-const APK_SHA256 = "a5528d447210da8dbca4e5ef614d90a875606ca54888d4c07bbcd72cce94044b";
+const VERSION_CODE = 6;
+const VERSION_NAME = "1.5";
+const APK_FILENAME = "Schoolent-Android-v1.5.apk";
+const APK_SIZE_BYTES = 46746142;
+const APK_SHA256 = "16d91880615016be9dfa5b480c7fba17d8e3c7d836b03cd80f82140932ec028e";
 
 const DOWNLOADS = [
   {
@@ -28,13 +28,13 @@ export async function onRequestGet() {
       versionName: VERSION_NAME,
       minSupportedVersionCode: 1,
       mandatory: false,
-      releaseDate: "2026-07-04",
+      releaseDate: "2026-08-31",
       sizeBytes: APK_SIZE_BYTES,
       sha256: APK_SHA256,
       releaseNotes: [
-        "Fixes occasional web page scaling and cropping after switching tabs.",
-        "Keeps retained web tabs at full layout size while hidden to preserve viewport state.",
-        "Prevents hidden web tabs from handling the Android back button."
+        "Moves the Schoolent portal and in-app navigation to ksc.schoolent.cn.",
+        "Restricts trusted deep links and WebView navigation to the new KSC host.",
+        "Updates content, sharing, and app-update fallback endpoints for the new domain."
       ],
       downloads: DOWNLOADS
     },
