@@ -17,7 +17,7 @@ const DOWNLOADS = [
   },
   {
     name: "Schoolent",
-    url: "https://schoolent.cn/api/download/android"
+    url: "https://ksc.schoolent.cn/api/download/android"
   }
 ];
 

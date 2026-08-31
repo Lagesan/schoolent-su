@@ -106,7 +106,7 @@ const ui = {
       shareFailed: "暂时无法分享，请稍后重试。"
     },
     app: {
-      badge: "APP MODE / SCHOOLENT.CN",
+      badge: "APP MODE / KSC.SCHOOLENT.CN",
       heading: "移动端门户",
       summary: "这个模式把门户压成更适合手机的摘要、快捷入口和操作卡片，而不是把桌面首页原样塞进 App。",
       quickActions: "快捷操作",
@@ -184,7 +184,7 @@ const ui = {
       shareFailed: "Unable to share right now. Please try again."
     },
     app: {
-      badge: "APP MODE / SCHOOLENT.CN",
+      badge: "APP MODE / KSC.SCHOOLENT.CN",
       heading: "Mobile Portal",
       summary: "This mode compresses the portal into quick actions, summaries, and spotlight cards instead of mirroring the desktop homepage.",
       quickActions: "Quick Actions",
@@ -589,7 +589,7 @@ function renderAppModeHub(content, language, meta) {
       </div>
       <p class="app-surface-copy">${escapeHtml(pick(content.site?.campaignNote) || pick(content.hero?.subtitle) || language.app.summary)}</p>
       <div class="app-inline-meta">
-        <span class="tag">schoolent.cn</span>
+        <span class="tag">ksc.schoolent.cn</span>
         ${appVersion ? `<span class="tag">APP ${escapeHtml(appVersion)}</span>` : ""}
         ${meta?.updatedAt ? `<span class="tag">${escapeHtml(formatDate(meta.updatedAt, true))}</span>` : ""}
       </div>
@@ -1273,7 +1273,7 @@ function setupSchoolentDeclarationActions() {
 }
 
 async function sharePortal() {
-  const url = "https://schoolent.cn/?app=1";
+  const url = "https://ksc.schoolent.cn/?app=1";
   const title = pick(state.content?.site?.name) || pick(state.content?.hero?.title) || "Schoolent Portal";
   const text = pick(state.content?.hero?.subtitle) || pick(state.content?.site?.tagline) || title;
 
